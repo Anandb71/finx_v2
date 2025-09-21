@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/user_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -26,10 +27,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      // Create user document in Firestore
+      if (userCredential.user != null) {
+        await UserService.createUserOnSignUp(
+          userCredential.user!.uid,
+          _emailController.text.trim(),
+          displayName: userCredential.user!.displayName,
+        );
+      }
 
       // Navigate back to AuthGate which will automatically show DashboardScreen
       if (mounted) {

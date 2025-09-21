@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/user_model.dart';
+import '../services/user_service.dart';
 import 'trade_screen.dart';
 import 'analytics_screen.dart';
 import 'learn_screen.dart';
@@ -57,21 +59,70 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Mock data for demonstration
+  // User data
+  UserModel? _userData;
+  bool _isLoading = true;
+
+  // Mock data for demonstration (will be replaced with real data)
   final double portfolioValue = 102500.00;
   final double dailyChange = 2500.00;
   final double dailyChangePercent = 2.5;
 
-  // Get user data from Firebase Auth
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await UserService.getCurrentUserData();
+      if (mounted) {
+        setState(() {
+          _userData = userData;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Get user display name from Firestore data or fallback to Auth
   String get displayName {
+    if (_userData != null) {
+      return _userData!.fullDisplayName;
+    }
+    
+    // Fallback to Firebase Auth data
     final user = FirebaseAuth.instance.currentUser;
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
       return user.displayName!;
     } else if (user?.email != null) {
-      // Extract name from email if no display name
       return user!.email!.split('@')[0];
     }
     return "Trader";
+  }
+
+  // Get user avatar initial
+  String get avatarInitial {
+    if (_userData != null) {
+      return _userData!.firstNameForAvatar;
+    }
+    
+    // Fallback to Firebase Auth data
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.displayName != null && user!.displayName!.isNotEmpty) {
+      return user.displayName![0].toUpperCase();
+    } else if (user?.email != null) {
+      return user!.email![0].toUpperCase();
+    }
+    return "T";
   }
 
   // Mock sparkline data (in a real app, this would come from your portfolio history)
@@ -152,6 +203,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show loading state while fetching user data
+    if (_isLoading) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF0F0F23),
+                Color(0xFF1A1A2E),
+                Color(0xFF16213E),
+                Color(0xFF0F3460),
+              ],
+              stops: [0.0, 0.3, 0.7, 1.0],
+            ),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFA3)),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -227,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            displayName.substring(0, 1).toUpperCase(),
+                            avatarInitial,
                             style: GoogleFonts.inter(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
