@@ -7,6 +7,7 @@ import '../services/stock_service.dart';
 import '../services/portfolio_provider.dart';
 import '../widgets/modern_stock_card.dart';
 import 'modern_trade_screen.dart';
+import 'portfolio_screen.dart';
 import 'analytics_screen.dart';
 import 'learn_screen.dart';
 import 'leaderboard_screen.dart';
@@ -325,93 +326,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final gainLoss = portfolio.totalGainLoss;
                       final gainLossPercent = portfolio.totalGainLossPercentage;
 
-                      return Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFF00FFA3).withOpacity(0.2),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 15,
-                              spreadRadius: 0,
-                              offset: const Offset(0, 6),
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PortfolioScreen(),
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF00FFA3,
-                                    ).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.account_balance_wallet,
-                                    color: Color(0xFF00FFA3),
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Text(
-                                  'Portfolio Value',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
+                          );
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFF00FFA3).withOpacity(0.2),
+                              width: 1,
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              '\$${totalValue.toStringAsFixed(2)}',
-                              style: GoogleFonts.inter(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF00FFA3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 15,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 6),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  gainLoss >= 0
-                                      ? Icons.trending_up
-                                      : Icons.trending_down,
-                                  color: gainLoss >= 0
-                                      ? const Color(0xFF00FFA3)
-                                      : Colors.red,
-                                  size: 16,
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF00FFA3,
+                                      ).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.account_balance_wallet,
+                                      color: Color(0xFF00FFA3),
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Text(
+                                    'Portfolio Value',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '\$${totalValue.toStringAsFixed(2)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF00FFA3),
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.abs().toStringAsFixed(2)} (${gainLossPercent >= 0 ? '+' : ''}${gainLossPercent.toStringAsFixed(1)}%)',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    gainLoss >= 0
+                                        ? Icons.trending_up
+                                        : Icons.trending_down,
                                     color: gainLoss >= 0
                                         ? const Color(0xFF00FFA3)
                                         : Colors.red,
-                                    fontWeight: FontWeight.w500,
+                                    size: 16,
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            // Mini Sparkline Chart
-                            _buildSparklineChart(),
-                          ],
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.abs().toStringAsFixed(2)} (${gainLossPercent >= 0 ? '+' : ''}${gainLossPercent.toStringAsFixed(1)}%)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: gainLoss >= 0
+                                          ? const Color(0xFF00FFA3)
+                                          : Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              // Mini Sparkline Chart
+                              _buildSparklineChart(),
+                            ],
+                          ),
                         ),
                       );
                     },

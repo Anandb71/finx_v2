@@ -95,16 +95,19 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
     });
   }
 
+  String get _currentSymbol {
+    return widget.stockData['symbol'] ?? 'N/A';
+  }
+
   double get _currentPrice {
     if (!mounted) return 0.0;
-    final portfolio = context.read<PortfolioProvider>();
-    return portfolio.getStockValue('TSLA');
+    return (widget.stockData['currentPrice'] ?? 0.0).toDouble();
   }
 
   int get _currentHolding {
     if (!mounted) return 0;
     final portfolio = context.read<PortfolioProvider>();
-    return portfolio.portfolio['TSLA'] ?? 0;
+    return portfolio.portfolio[_currentSymbol] ?? 0;
   }
 
   Future<void> _executeTrade() async {
@@ -136,8 +139,12 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
 
     try {
       final portfolio = context.read<PortfolioProvider>();
+
+      // Update the stock price in portfolio
+      portfolio.updateStockPrice(_currentSymbol, _currentPrice);
+
       final success = await portfolio.executeTrade(
-        symbol: 'TSLA',
+        symbol: _currentSymbol,
         quantity: quantity,
         price: _currentPrice,
         type: _isBuyMode ? TransactionType.buy : TransactionType.sell,
@@ -152,8 +159,8 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
             SnackBar(
               content: Text(
                 _isBuyMode
-                    ? 'Successfully bought $quantity TSLA shares!'
-                    : 'Successfully sold $quantity TSLA shares!',
+                    ? 'Successfully bought $quantity ${_currentSymbol} shares!'
+                    : 'Successfully sold $quantity ${_currentSymbol} shares!',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
               ),
               backgroundColor: _isBuyMode
@@ -333,7 +340,7 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
                 ),
                 child: Center(
                   child: Text(
-                    'TSLA',
+                    _currentSymbol,
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -348,7 +355,7 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tesla Inc.',
+                      widget.stockData['name'] ?? 'Unknown Company',
                       style: GoogleFonts.inter(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -357,7 +364,7 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Electric Vehicle & Energy Company',
+                      widget.stockData['sector'] ?? 'Technology Company',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.7),
@@ -460,7 +467,7 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
             const SizedBox(height: 8),
             Expanded(
               child: SparklineWidget(
-                prices: _generateMockPriceHistory(),
+                prices: _getPriceHistory(),
                 lineColor: const Color(0xFF00FFA3),
                 fillColor: const Color(0xFF00FFA3).withOpacity(0.2),
                 height: 60,
@@ -473,13 +480,19 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
     );
   }
 
-  List<double> _generateMockPriceHistory() {
+  List<double> _getPriceHistory() {
+    final priceHistory = widget.stockData['priceHistory'];
+    if (priceHistory != null && priceHistory is List) {
+      return priceHistory.map((e) => (e as num).toDouble()).toList();
+    }
+
+    // Fallback to mock data if no price history available
     final random = math.Random();
     final basePrice = _currentPrice;
     final prices = <double>[];
 
     for (int i = 0; i < 30; i++) {
-      final variation = (random.nextDouble() - 0.5) * 20;
+      final variation = (random.nextDouble() - 0.5) * (basePrice * 0.1);
       prices.add(basePrice + variation);
     }
 
