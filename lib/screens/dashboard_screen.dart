@@ -1,6 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'trade_screen.dart';
+import 'analytics_screen.dart';
+import 'learn_screen.dart';
+import 'leaderboard_screen.dart';
+import 'quests_screen.dart';
+import 'achievements_screen.dart';
 
 // Data models
 class Quest {
@@ -355,12 +361,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   title: 'Trade',
                                   subtitle: 'Your top mover: TSLA +7.1%',
                                   onTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Trading feature coming soon!',
-                                        ),
-                                        backgroundColor: Color(0xFF00FFA3),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const TradeScreen(),
                                       ),
                                     );
                                   },
@@ -373,12 +377,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   title: 'Analytics',
                                   subtitle: 'Portfolio up 2.5% today',
                                   onTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Analytics feature coming soon!',
-                                        ),
-                                        backgroundColor: Color(0xFF00FFA3),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const AnalyticsScreen(),
                                       ),
                                     );
                                   },
@@ -395,12 +397,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   title: 'Learn',
                                   subtitle: 'Next lesson: What is an ETF?',
                                   onTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Learning center coming soon!',
-                                        ),
-                                        backgroundColor: Color(0xFF00FFA3),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const LearnScreen(),
                                       ),
                                     );
                                   },
@@ -413,12 +413,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   title: 'Leaderboard',
                                   subtitle: 'Your Rank: #125 ▲',
                                   onTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Leaderboard coming soon!',
-                                        ),
-                                        backgroundColor: Color(0xFF00FFA3),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const LeaderboardScreen(),
                                       ),
                                     );
                                   },
@@ -481,13 +479,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Daily Quests',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Daily Quests',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const QuestsScreen(),
+                  ),
+                );
+              },
+              child: Text(
+                'View All',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF00FFA3),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         ...dailyQuests.map((quest) => _buildQuestCard(quest)).toList(),
@@ -687,13 +708,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'My Achievements',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'My Achievements',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AchievementsScreen(),
+                  ),
+                );
+              },
+              child: Text(
+                'View All',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF00FFA3),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
