@@ -13,6 +13,7 @@ import 'learn_screen.dart';
 import 'leaderboard_screen.dart';
 import 'quests_screen.dart';
 import 'achievements_screen.dart';
+import 'ai_mentor_screen.dart';
 
 // Data models
 class Quest {
@@ -177,7 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       title: "Read an article in the Learn section",
       icon: "💡",
       isCompleted: false,
-      progress: 0.0,
+      progress: 0.3,
     ),
     Quest(
       id: 2,
@@ -192,6 +193,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       icon: "💰",
       isCompleted: true,
       progress: 1.0,
+    ),
+    Quest(
+      id: 4,
+      title: "Check market movers",
+      icon: "📊",
+      isCompleted: false,
+      progress: 0.7,
+    ),
+    Quest(
+      id: 5,
+      title: "Complete 3 trades this week",
+      icon: "🎯",
+      isCompleted: false,
+      progress: 0.6,
     ),
   ];
 
@@ -316,6 +331,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Player Status Card
+                  Consumer<PortfolioProvider>(
+                    builder: (context, portfolio, child) {
+                      return _buildPlayerStatusCard(portfolio, displayName);
+                    },
                   ),
                   const SizedBox(height: 24),
 
@@ -534,6 +557,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDynamicActionCard(
+                                  icon: Icons.account_balance_wallet,
+                                  title: 'Portfolio',
+                                  subtitle: 'View your holdings',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const PortfolioScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildDynamicActionCard(
+                                  icon: Icons.emoji_events,
+                                  title: 'Achievements',
+                                  subtitle: '3 badges earned',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const AchievementsScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       );
                     },
@@ -586,115 +647,240 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildDailyQuestsSection() {
+    final completedQuests = dailyQuests.where((q) => q.isCompleted).length;
+    final totalQuests = dailyQuests.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Daily Quests',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Daily Quests',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '$completedQuests of $totalQuests completed',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const QuestsScreen()),
-                );
-              },
-              child: Text(
-                'View All',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF00FFA3),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FFA3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF00FFA3).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const QuestsScreen(),
+                    ),
+                  );
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View All',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF00FFA3),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Color(0xFF00FFA3),
+                      size: 12,
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         ...dailyQuests.map((quest) => _buildQuestCard(quest)).toList(),
       ],
     );
   }
 
   Widget _buildQuestCard(Quest quest) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Responsive sizing based on screen size
-        final isDesktop = MediaQuery.of(context).size.width > 768;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 2), // Even more reduced
-          padding: EdgeInsets.all(
-            isDesktop ? 8 : 4,
-          ), // Even more reduced padding
-          decoration: BoxDecoration(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: quest.isCompleted
+            ? const LinearGradient(
+                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.08),
+                  Colors.white.withOpacity(0.03),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: quest.isCompleted
+              ? const Color(0xFF00FFA3).withOpacity(0.5)
+              : Colors.white.withOpacity(0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
             color: quest.isCompleted
-                ? const Color(0xFF00FFA3).withOpacity(0.1)
-                : Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8), // Even more reduced
-            border: Border.all(
+                ? const Color(0xFF00FFA3).withOpacity(0.2)
+                : Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            spreadRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Quest icon with background
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
               color: quest.isCompleted
-                  ? const Color(0xFF00FFA3).withOpacity(0.3)
-                  : Colors.white.withOpacity(0.1),
-              width: 1,
+                  ? Colors.white.withOpacity(0.2)
+                  : const Color(0xFF00FFA3).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(quest.icon, style: const TextStyle(fontSize: 18)),
             ),
           ),
-          child: Row(
-            children: [
-              Text(
-                quest.icon,
-                style: TextStyle(fontSize: isDesktop ? 16 : 12), // Even smaller
-              ),
-              SizedBox(width: isDesktop ? 4 : 2), // Even smaller spacing
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      quest.title,
-                      style: GoogleFonts.inter(
-                        fontSize: isDesktop ? 10 : 8, // Even smaller font
-                        fontWeight: FontWeight.w500,
-                        color: quest.isCompleted
-                            ? const Color(0xFF00FFA3)
-                            : Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (!quest.isCompleted) ...[
-                      const SizedBox(height: 0), // No spacing
-                      LinearProgressIndicator(
-                        value: quest.progress,
-                        backgroundColor: Colors.white.withOpacity(0.1),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF00FFA3),
+          const SizedBox(width: 12),
+
+          // Quest content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  quest.title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: quest.isCompleted ? Colors.white : Colors.white,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+
+                if (!quest.isCompleted) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: quest.progress,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF00FFA3),
+                          ),
+                          minHeight: 4,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        minHeight: 1, // Very thin
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${(quest.progress * 100).toInt()}%',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white70,
+                        ),
                       ),
                     ],
-                  ],
-                ),
-              ),
-              if (quest.isCompleted)
-                Icon(
-                  Icons.check_circle,
-                  color: const Color(0xFF00FFA3),
-                  size: isDesktop ? 16 : 12, // Even smaller
-                ),
-            ],
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Completed!',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
           ),
-        );
-      },
+
+          // XP reward indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: quest.isCompleted
+                  ? Colors.white.withOpacity(0.2)
+                  : const Color(0xFF00FFA3).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '+${quest.id * 25} XP',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: quest.isCompleted
+                    ? Colors.white
+                    : const Color(0xFF00FFA3),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1003,6 +1189,209 @@ class _DashboardScreenState extends State<DashboardScreen> {
           maxValue: maxValue,
           color: dailyChange >= 0 ? const Color(0xFF00FFA3) : Colors.red,
         ),
+      ),
+    );
+  }
+
+  Widget _buildPlayerStatusCard(
+    PortfolioProvider portfolio,
+    String displayName,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.08),
+            Colors.white.withOpacity(0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF00FFA3).withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 15,
+            spreadRadius: 0,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.emoji_events,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Player Status',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '$displayName • Level ${portfolio.userLevel}',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00FFA3).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF00FFA3).withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  portfolio.getLevelTitle(),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF00FFA3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Experience Points',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${portfolio.userXp} / ${portfolio.xpForNextLevel} XP',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${(portfolio.xpProgress * 100).toStringAsFixed(0)}%',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF00FFA3),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: portfolio.xpProgress.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Demo XP button (for testing)
+          GestureDetector(
+            onTap: () {
+              portfolio.addXp(100);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '+100 XP! Keep learning!',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                  backgroundColor: const Color(0xFF00FFA3),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  margin: const EdgeInsets.all(10),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FFA3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF00FFA3).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, color: const Color(0xFF00FFA3), size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Complete Quest (+100 XP)',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF00FFA3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

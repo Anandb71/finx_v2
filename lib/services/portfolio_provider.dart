@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
+import '../models/achievement.dart';
+import '../models/challenge.dart';
+import '../services/achievement_service.dart';
+import '../services/challenge_service.dart';
 
 class PortfolioProvider extends ChangeNotifier {
   // Starting virtual cash
@@ -7,6 +11,37 @@ class PortfolioProvider extends ChangeNotifier {
 
   // Portfolio holdings: {symbol: quantity}
   Map<String, int> _portfolio = {};
+
+  // Player progression system
+  int _userLevel = 1;
+  int _userXp = 0;
+  int _xpForNextLevel = 1000;
+
+  // Achievement and XP tracking
+  final AchievementService _achievementService = AchievementService();
+  final ChallengeService _challengeService = ChallengeService();
+  List<Achievement> _recentlyUnlockedAchievements = [];
+  List<Challenge> _recentlyCompletedChallenges = [];
+
+  // User activity tracking for achievements
+  int _totalTrades = 0;
+  int _dailyTrades = 0;
+  DateTime _lastTradeDate = DateTime.now();
+  int _consecutiveWins = 0;
+  // int _consecutiveLosses = 0; // Currently not used but kept for future features
+  bool _hasSoldLosingPosition = false;
+  double _maxPortfolioLoss = 0.0;
+  DateTime _firstTradeDate = DateTime.now();
+
+  // Learning and social tracking
+  int _aiChatCount = 0;
+  int _articlesRead = 0;
+  int _videosWatched = 0;
+  int _quizzesCompleted = 0;
+  int _perfectQuizzes = 0;
+  int _communityHelps = 0;
+  // int _achievementsShared = 0; // Currently not used but kept for future features
+  int _correctPredictions = 0;
 
   // Transaction history for analytics
   List<Transaction> _transactionHistory = [];
@@ -36,6 +71,41 @@ class PortfolioProvider extends ChangeNotifier {
   Map<String, int> get portfolio => Map.from(_portfolio);
   Map<String, double> get currentPrices => Map.from(_currentPrices);
   List<Transaction> get transactionHistory => List.from(_transactionHistory);
+
+  // Player progression getters
+  int get userLevel => _userLevel;
+  int get userXp => _userXp;
+  int get xpForNextLevel => _xpForNextLevel;
+  double get xpProgress => _userXp / _xpForNextLevel;
+
+  // Achievement getters
+  List<Achievement> get recentlyUnlockedAchievements =>
+      List.from(_recentlyUnlockedAchievements);
+  List<Achievement> get allAchievements =>
+      _achievementService.getAllAchievements();
+  List<Achievement> get unlockedAchievements =>
+      _achievementService.getUnlockedAchievements();
+
+  // Challenge getters
+  List<Challenge> get activeChallenges =>
+      _challengeService.getActiveChallenges();
+  List<Challenge> get recentlyCompletedChallenges =>
+      List.from(_recentlyCompletedChallenges);
+  List<Challenge> get dailyChallenges =>
+      _challengeService.getChallengesByType(ChallengeType.daily);
+  List<Challenge> get weeklyChallenges =>
+      _challengeService.getChallengesByType(ChallengeType.weekly);
+
+  // Activity tracking getters
+  int get totalTrades => _totalTrades;
+  int get dailyTrades => _dailyTrades;
+  int get consecutiveWins => _consecutiveWins;
+  int get aiChatCount => _aiChatCount;
+  int get articlesRead => _articlesRead;
+  int get videosWatched => _videosWatched;
+  int get quizzesCompleted => _quizzesCompleted;
+  int get perfectQuizzes => _perfectQuizzes;
+  int get communityHelps => _communityHelps;
 
   // Get total portfolio value
   double get totalPortfolioValue {
@@ -95,6 +165,8 @@ class PortfolioProvider extends ChangeNotifier {
     if (quantity <= 0) return false;
 
     final totalCost = quantity * price;
+    final currentHolding = _portfolio[symbol] ?? 0;
+    final purchasePrice = _purchasePrices[symbol] ?? 0.0;
 
     // Validate trade
     if (type == TransactionType.buy) {
@@ -102,7 +174,6 @@ class PortfolioProvider extends ChangeNotifier {
         return false; // Not enough cash
       }
     } else if (type == TransactionType.sell) {
-      final currentHolding = _portfolio[symbol] ?? 0;
       if (currentHolding < quantity) {
         return false; // Not enough shares
       }
@@ -111,17 +182,21 @@ class PortfolioProvider extends ChangeNotifier {
     // Execute the trade
     if (type == TransactionType.buy) {
       _virtualCash -= totalCost;
-      _portfolio[symbol] = (_portfolio[symbol] ?? 0) + quantity;
+      _portfolio[symbol] = currentHolding + quantity;
 
       // Update purchase price (weighted average)
-      final currentQuantity = _portfolio[symbol] ?? 0;
-      final currentPurchasePrice = _purchasePrices[symbol] ?? 0.0;
-      final currentValue = (currentQuantity - quantity) * currentPurchasePrice;
+      final currentValue = currentHolding * purchasePrice;
       final newValue = currentValue + totalCost;
-      _purchasePrices[symbol] = newValue / currentQuantity;
+      _purchasePrices[symbol] = newValue / (currentHolding + quantity);
     } else {
       _virtualCash += totalCost;
-      _portfolio[symbol] = (_portfolio[symbol] ?? 0) - quantity;
+      _portfolio[symbol] = currentHolding - quantity;
+
+      // Check if this was a losing position (for risk management achievement)
+      if (purchasePrice > 0 && price < purchasePrice) {
+        _hasSoldLosingPosition = true;
+        _updateChallengesForRiskManagement();
+      }
 
       // Remove from portfolio if quantity reaches 0
       if (_portfolio[symbol] == 0) {
@@ -129,6 +204,18 @@ class PortfolioProvider extends ChangeNotifier {
         _purchasePrices.remove(symbol);
       }
     }
+
+    // Update trade tracking
+    _totalTrades++;
+    _updateDailyTradeCount();
+
+    // Track first trade date
+    if (_totalTrades == 1) {
+      _firstTradeDate = DateTime.now();
+    }
+
+    // Track consecutive wins/losses
+    _updateConsecutiveTrades(type, purchasePrice, price);
 
     // Add to transaction history
     _transactionHistory.add(
@@ -140,6 +227,17 @@ class PortfolioProvider extends ChangeNotifier {
         timestamp: DateTime.now(),
       ),
     );
+
+    // Award XP for trading actions
+    _awardTradingXp(type, quantity, price);
+
+    // Update challenges
+    _updateChallengesForTrade();
+    _updateChallengesForPortfolioGrowth();
+    _updateChallengesForDiversification();
+
+    // Check for new achievements
+    _checkAndUnlockAchievements();
 
     // Simulate price movement (small random change)
     _simulatePriceMovement(symbol);
@@ -160,14 +258,6 @@ class PortfolioProvider extends ChangeNotifier {
   // Update price for a specific stock (for real-time updates)
   void updateStockPrice(String symbol, double newPrice) {
     _currentPrices[symbol] = newPrice;
-    notifyListeners();
-  }
-
-  // Reset portfolio (for testing)
-  void resetPortfolio() {
-    _virtualCash = 100000.00;
-    _portfolio.clear();
-    _transactionHistory.clear();
     notifyListeners();
   }
 
@@ -327,6 +417,373 @@ class PortfolioProvider extends ChangeNotifier {
         PortfolioValuePoint(timestamp: date, value: value),
       );
     }
+  }
+
+  // XP and Leveling System
+  void addXp(int amount) {
+    _userXp += amount;
+
+    // Check if user should level up
+    while (_userXp >= _xpForNextLevel) {
+      _userXp -= _xpForNextLevel;
+      _userLevel++;
+      _xpForNextLevel = (_xpForNextLevel * 1.2)
+          .round(); // Increase XP requirement by 20% each level
+    }
+
+    notifyListeners();
+  }
+
+  // Award XP for trading actions
+  void _awardTradingXp(TransactionType type, int quantity, double price) {
+    int xpToAward = 0;
+
+    // First trade bonus
+    if (_totalTrades == 1) {
+      xpToAward += _achievementService.getXpForAction('first_trade');
+    }
+
+    // Daily trading bonus (max 3 trades per day)
+    if (_dailyTrades <= 3) {
+      xpToAward += _achievementService.getXpForAction('daily_trade');
+    }
+
+    // Portfolio growth bonus (check if portfolio grew by 5%+)
+    final currentValue = totalPortfolioValue;
+    if (currentValue > 105000) {
+      // 5% growth from starting $100k
+      xpToAward += _achievementService.getXpForAction(
+        'portfolio_growth_5_percent',
+      );
+    }
+
+    // Diversification bonus
+    final sectors = getPortfolioDiversification().keys.length;
+    if (sectors >= 3) {
+      xpToAward += _achievementService.getXpForAction('diversification');
+    }
+
+    // Long-term holding bonus
+    final daysSinceFirstTrade = DateTime.now()
+        .difference(_firstTradeDate)
+        .inDays;
+    if (daysSinceFirstTrade >= 7) {
+      xpToAward += _achievementService.getXpForAction('long_term_holding');
+    }
+
+    // Risk management bonus
+    if (_hasSoldLosingPosition) {
+      xpToAward += _achievementService.getXpForAction('risk_management');
+    }
+
+    if (xpToAward > 0) {
+      addXp(xpToAward);
+    }
+  }
+
+  // Update daily trade count
+  void _updateDailyTradeCount() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final lastTradeDay = DateTime(
+      _lastTradeDate.year,
+      _lastTradeDate.month,
+      _lastTradeDate.day,
+    );
+
+    if (today.isAfter(lastTradeDay)) {
+      _dailyTrades = 1; // New day, reset counter
+    } else {
+      _dailyTrades++;
+    }
+    _lastTradeDate = now;
+  }
+
+  // Update consecutive wins/losses tracking
+  void _updateConsecutiveTrades(
+    TransactionType type,
+    double purchasePrice,
+    double sellPrice,
+  ) {
+    if (type == TransactionType.sell && purchasePrice > 0) {
+      final isProfitable = sellPrice > purchasePrice;
+
+      if (isProfitable) {
+        _consecutiveWins++;
+        // _consecutiveLosses = 0; // Commented out as not currently used
+      } else {
+        // _consecutiveLosses++; // Commented out as not currently used
+        _consecutiveWins = 0;
+      }
+    }
+  }
+
+  // Check and unlock achievements
+  void _checkAndUnlockAchievements() {
+    final daysSinceFirstTrade = DateTime.now()
+        .difference(_firstTradeDate)
+        .inDays;
+    final sectorsInvested = getPortfolioDiversification().keys.length;
+
+    // Update max portfolio loss tracking
+    final currentLoss = totalGainLossPercentage;
+    if (currentLoss < _maxPortfolioLoss) {
+      _maxPortfolioLoss = currentLoss;
+    }
+
+    final newlyUnlocked = _achievementService.checkAndUnlockAchievements(
+      totalTrades: _totalTrades,
+      portfolioValue: totalPortfolioValue,
+      daysSinceFirstTrade: daysSinceFirstTrade,
+      aiChatCount: _aiChatCount,
+      articlesRead: _articlesRead,
+      quizzesCompleted: _quizzesCompleted,
+      perfectQuizzes: _perfectQuizzes,
+      communityHelps: _communityHelps,
+      consecutiveWins: _consecutiveWins,
+      hasSoldLosingPosition: _hasSoldLosingPosition,
+      sectorsInvested: sectorsInvested,
+      correctPredictions: _correctPredictions,
+      maxPortfolioLoss: _maxPortfolioLoss,
+    );
+
+    if (newlyUnlocked.isNotEmpty) {
+      _recentlyUnlockedAchievements.addAll(newlyUnlocked);
+
+      // Award XP for each achievement
+      for (final achievement in newlyUnlocked) {
+        addXp(achievement.xpReward);
+      }
+    }
+  }
+
+  // Learning and Social Actions
+  void recordAiChat() {
+    _aiChatCount++;
+    addXp(_achievementService.getXpForAction('ai_chat'));
+    _updateChallengesForLearning();
+    _checkAndUnlockAchievements();
+  }
+
+  void recordArticleRead() {
+    _articlesRead++;
+    addXp(_achievementService.getXpForAction('read_article'));
+    _updateChallengesForLearning();
+    _checkAndUnlockAchievements();
+  }
+
+  void recordVideoWatched() {
+    _videosWatched++;
+    addXp(_achievementService.getXpForAction('watch_video'));
+    _updateChallengesForLearning();
+    _checkAndUnlockAchievements();
+  }
+
+  void recordQuizCompleted({bool isPerfect = false}) {
+    _quizzesCompleted++;
+    if (isPerfect) {
+      _perfectQuizzes++;
+      addXp(_achievementService.getXpForAction('perfect_quiz'));
+    } else {
+      addXp(_achievementService.getXpForAction('complete_quiz'));
+    }
+    _updateChallengesForLearning();
+    _checkAndUnlockAchievements();
+  }
+
+  void recordCommunityHelp() {
+    _communityHelps++;
+    addXp(_achievementService.getXpForAction('help_community'));
+    _updateChallengesForCommunityHelp();
+    _checkAndUnlockAchievements();
+  }
+
+  void recordAchievementShared() {
+    // _achievementsShared++; // Commented out as not currently used
+    addXp(_achievementService.getXpForAction('share_achievement'));
+    _updateChallengesForAchievements();
+  }
+
+  void recordCorrectPrediction() {
+    _correctPredictions++;
+    _checkAndUnlockAchievements();
+  }
+
+  // Clear recently unlocked achievements (called after displaying them)
+  void clearRecentlyUnlockedAchievements() {
+    _recentlyUnlockedAchievements.clear();
+  }
+
+  // Get random encouragement message
+  String getRandomEncouragement() {
+    return _achievementService.getRandomEncouragement();
+  }
+
+  // Challenge Management
+  void initializeChallenges() {
+    _challengeService.generateDailyChallenges();
+    _challengeService.generateWeeklyChallenges();
+    notifyListeners();
+  }
+
+  void updateChallengeProgress(
+    String challengeId,
+    Map<String, dynamic> progressUpdate,
+  ) {
+    _challengeService.updateChallengeProgress(challengeId, progressUpdate);
+
+    // Check if challenge is completed
+    final challenge = _challengeService.getChallenge(challengeId);
+    if (challenge != null && challenge.isCompleted) {
+      final completedChallenge = _challengeService.completeChallenge(
+        challengeId,
+      );
+      if (completedChallenge != null) {
+        _recentlyCompletedChallenges.add(completedChallenge);
+        addXp(completedChallenge.xpReward);
+      }
+    }
+
+    notifyListeners();
+  }
+
+  // Update challenges based on user actions
+  void _updateChallengesForTrade() {
+    // Update trade-related challenges
+    for (final challenge in _challengeService.getActiveChallenges()) {
+      if (challenge.requirements.containsKey('trades')) {
+        _challengeService.updateChallengeProgress(challenge.id, {'trades': 1});
+      }
+    }
+  }
+
+  void _updateChallengesForPortfolioGrowth() {
+    final growthPercent = ((totalPortfolioValue - 100000) / 100000) * 100;
+
+    for (final challenge in _challengeService.getActiveChallenges()) {
+      if (challenge.requirements.containsKey('portfolio_growth')) {
+        final requiredGrowth =
+            challenge.requirements['portfolio_growth'] as double;
+        if (growthPercent >= requiredGrowth) {
+          _challengeService.updateChallengeProgress(challenge.id, {
+            'portfolio_growth': growthPercent,
+          });
+        }
+      }
+    }
+  }
+
+  void _updateChallengesForDiversification() {
+    final sectors = getPortfolioDiversification().keys.length;
+
+    for (final challenge in _challengeService.getActiveChallenges()) {
+      if (challenge.requirements.containsKey('sectors')) {
+        _challengeService.updateChallengeProgress(challenge.id, {
+          'sectors': sectors,
+        });
+      }
+    }
+  }
+
+  void _updateChallengesForLearning() {
+    for (final challenge in _challengeService.getActiveChallenges()) {
+      if (challenge.requirements.containsKey('learning_actions')) {
+        _challengeService.updateChallengeProgress(challenge.id, {
+          'learning_actions': 1,
+        });
+      }
+    }
+  }
+
+  // Risk management challenge update (called when selling losing positions)
+  void _updateChallengesForRiskManagement() {
+    for (final challenge in _challengeService.getActiveChallenges()) {
+      if (challenge.requirements.containsKey('risk_management')) {
+        _challengeService.updateChallengeProgress(challenge.id, {
+          'risk_management': 1,
+        });
+      }
+    }
+  }
+
+  void _updateChallengesForCommunityHelp() {
+    for (final challenge in _challengeService.getActiveChallenges()) {
+      if (challenge.requirements.containsKey('community_helps')) {
+        _challengeService.updateChallengeProgress(challenge.id, {
+          'community_helps': 1,
+        });
+      }
+    }
+  }
+
+  void _updateChallengesForAchievements() {
+    for (final challenge in _challengeService.getActiveChallenges()) {
+      if (challenge.requirements.containsKey('achievements')) {
+        _challengeService.updateChallengeProgress(challenge.id, {
+          'achievements': 1,
+        });
+      }
+    }
+  }
+
+  // Clear recently completed challenges
+  void clearRecentlyCompletedChallenges() {
+    _recentlyCompletedChallenges.clear();
+  }
+
+  // Get challenge encouragement
+  String getChallengeEncouragement() {
+    return _challengeService.getRandomChallengeEncouragement();
+  }
+
+  // Get level title based on current level
+  String getLevelTitle() {
+    if (_userLevel <= 3) return 'Novice Investor';
+    if (_userLevel <= 6) return 'Rising Trader';
+    if (_userLevel <= 10) return 'Experienced Investor';
+    if (_userLevel <= 15) return 'Market Analyst';
+    if (_userLevel <= 20) return 'Portfolio Manager';
+    return 'Investment Master';
+  }
+
+  // Reset portfolio (for testing) - also reset XP and achievements
+  void resetPortfolio() {
+    _virtualCash = 100000.00;
+    _portfolio.clear();
+    _transactionHistory.clear();
+    _currentPrices.clear();
+    _userLevel = 1;
+    _userXp = 0;
+    _xpForNextLevel = 1000;
+
+    // Reset achievement tracking
+    _recentlyUnlockedAchievements.clear();
+    _totalTrades = 0;
+    _dailyTrades = 0;
+    _lastTradeDate = DateTime.now();
+    _consecutiveWins = 0;
+    // _consecutiveLosses = 0; // Commented out as not currently used
+    _hasSoldLosingPosition = false;
+    _maxPortfolioLoss = 0.0;
+    _firstTradeDate = DateTime.now();
+
+    // Reset learning and social tracking
+    _aiChatCount = 0;
+    _articlesRead = 0;
+    _videosWatched = 0;
+    _quizzesCompleted = 0;
+    _perfectQuizzes = 0;
+    _communityHelps = 0;
+    // _achievementsShared = 0; // Commented out as not currently used
+    _correctPredictions = 0;
+
+    // Reset achievement service
+    _achievementService.resetAchievements();
+
+    // Reset challenge service
+    _challengeService.resetChallenges();
+
+    notifyListeners();
   }
 }
 

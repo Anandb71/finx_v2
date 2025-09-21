@@ -8,6 +8,7 @@ import 'auth/auth_gate.dart';
 import 'screens/signup_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/portfolio_provider.dart';
+import 'widgets/app_with_floating_ai.dart';
 
 // To make GoogleFonts work, add this to your pubspec.yaml file:
 // dependencies:
@@ -22,11 +23,18 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // Global key for navigation
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => PortfolioProvider(),
+      create: (context) => PortfolioProvider()
+        ..initializeMockHistory()
+        ..initializeChallenges(),
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.dark,
@@ -38,9 +46,24 @@ class MyApp extends StatelessWidget {
             onPrimary: Colors.black,
           ),
         ),
-        home: const AuthGate(),
+        home: const AppWithFloatingAI(child: AuthGate()),
+        builder: (context, child) {
+          return AppWithFloatingAI(
+            child: child!,
+            showFloatingAI: _shouldShowFloatingAI(context),
+          );
+        },
       ),
     );
+  }
+
+  bool _shouldShowFloatingAI(BuildContext context) {
+    // Show floating AI button on all screens except the AI Mentor screen itself
+    final route = ModalRoute.of(context);
+    if (route == null) return true;
+
+    final routeName = route.settings.name;
+    return routeName != '/ai-mentor' && routeName != '/ai_mentor';
   }
 }
 

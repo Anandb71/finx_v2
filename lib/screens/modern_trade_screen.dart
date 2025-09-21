@@ -155,6 +155,11 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
           _successController.forward();
           _quantityController.clear();
 
+          // Add XP for first trade
+          if (portfolio.transactionHistory.length == 1) {
+            portfolio.addXp(250);
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
