@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/user_model.dart';
 import '../services/user_service.dart';
 import '../services/stock_service.dart';
+import '../widgets/sparkline_widget.dart';
+import '../widgets/expandable_stock_card.dart';
 import 'trade_screen.dart';
 import 'analytics_screen.dart';
 import 'learn_screen.dart';
@@ -28,7 +30,6 @@ class Quest {
   });
 }
 
-
 class Achievement {
   final String name;
   final String icon;
@@ -51,9 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final UserService _userService = UserService();
   final StockService _stockService = StockService();
 
-  // Stock data
-  List<Map<String, dynamic>> _stocks = [];
-  bool _stocksLoading = true;
+  // Stock data - now using StreamBuilder, no need for state variables
 
   // Mock data for demonstration (will be replaced with real data)
   final double portfolioValue = 102500.00;
@@ -64,14 +63,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    _loadStockData();
   }
 
   Future<void> _loadUserData() async {
     try {
       // Get full user data for all features
       final userData = await _userService.getCurrentUserData();
-      
+
       if (mounted) {
         setState(() {
           _userData = userData;
@@ -80,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       print('Error loading user data: $e');
-      
+
       // If user document doesn't exist, try to create it
       if (e.toString().contains('User document does not exist')) {
         try {
@@ -92,7 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               user.email ?? 'unknown@example.com',
               displayName: user.displayName,
             );
-            
+
             // Try to load user data again
             final userData = await _userService.getCurrentUserData();
             if (mounted) {
@@ -107,29 +105,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           print('Error creating missing user document: $createError');
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadStockData() async {
-    try {
-      final stocks = await _stockService.getAllStocks();
-      if (mounted) {
-        setState(() {
-          _stocks = stocks;
-          _stocksLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading stock data: $e');
-      if (mounted) {
-        setState(() {
-          _stocksLoading = false;
         });
       }
     }
@@ -140,7 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_userData != null) {
       return _userData!.fullDisplayName;
     }
-    
+
     // Fallback to Firebase Auth data
     final user = FirebaseAuth.instance.currentUser;
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
@@ -156,7 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_userData != null) {
       return _userData!.firstNameForAvatar;
     }
-    
+
     // Fallback to Firebase Auth data
     final user = FirebaseAuth.instance.currentUser;
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
@@ -202,7 +181,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       progress: 1.0,
     ),
   ];
-
 
   // Mock achievements
   final List<Achievement> achievements = [
@@ -452,7 +430,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const TradeScreen(),
+                                        builder: (context) =>
+                                            const TradeScreen(),
                                       ),
                                     );
                                   },
@@ -468,7 +447,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const AnalyticsScreen(),
+                                        builder: (context) =>
+                                            const AnalyticsScreen(),
                                       ),
                                     );
                                   },
@@ -488,7 +468,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const LearnScreen(),
+                                        builder: (context) =>
+                                            const LearnScreen(),
                                       ),
                                     );
                                   },
@@ -504,7 +485,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const LeaderboardScreen(),
+                                        builder: (context) =>
+                                            const LeaderboardScreen(),
                                       ),
                                     );
                                   },
@@ -582,9 +564,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const QuestsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const QuestsScreen()),
                 );
               },
               child: Text(
@@ -609,7 +589,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, constraints) {
         // Responsive sizing based on screen size
         final isDesktop = MediaQuery.of(context).size.width > 768;
-        
+
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: EdgeInsets.all(isDesktop ? 16 : 12),
@@ -627,10 +607,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Row(
             children: [
-              Text(
-                quest.icon, 
-                style: TextStyle(fontSize: isDesktop ? 24 : 20)
-              ),
+              Text(quest.icon, style: TextStyle(fontSize: isDesktop ? 24 : 20)),
               SizedBox(width: isDesktop ? 12 : 8),
               Expanded(
                 child: Column(
@@ -662,9 +639,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               if (quest.isCompleted)
                 Icon(
-                  Icons.check_circle, 
-                  color: const Color(0xFF00FFA3), 
-                  size: isDesktop ? 20 : 16
+                  Icons.check_circle,
+                  color: const Color(0xFF00FFA3),
+                  size: isDesktop ? 20 : 16,
                 ),
             ],
           ),
@@ -687,30 +664,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 80,
-          child: _stocksLoading
-              ? const Center(
+          height:
+              150, // Increased height to accommodate expandable cards with sparklines
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _stockService.getStocksStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFA3)),
-                  ),
-                )
-              : _stocks.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No stock data available',
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _stocks.take(10).length, // Show first 10 stocks
-                      itemBuilder: (context, index) {
-                        final stockData = _stocks[index];
-                        return _buildStockCardFromData(stockData);
-                      },
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF00FFA3),
                     ),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error loading stocks: ${snapshot.error}',
+                    style: GoogleFonts.inter(
+                      color: Colors.red.withOpacity(0.7),
+                    ),
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(
+                  child: Text(
+                    'No stock data available',
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                  ),
+                );
+              }
+
+              final stocks = snapshot.data!;
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: stocks.take(10).length, // Show first 10 stocks
+                itemBuilder: (context, index) {
+                  final stockData = stocks[index];
+                  final isDesktop = MediaQuery.of(context).size.width > 768;
+                  return ExpandableStockCard(
+                    stockData: stockData,
+                    isDesktop: isDesktop,
+                  );
+                },
+              );
+            },
+          ),
         ),
       ],
     );
@@ -719,100 +724,169 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStockCardFromData(Map<String, dynamic> stockData) {
     final symbol = stockData['symbol'] ?? 'N/A';
     final name = stockData['name'] ?? 'Unknown Company';
-    final price = (stockData['price'] ?? 0.0).toDouble();
+    final price = (stockData['currentPrice'] ?? 0.0).toDouble();
     final change = (stockData['change'] ?? 0.0).toDouble();
     final changePercent = (stockData['changePercent'] ?? 0.0).toDouble();
+    final priceHistory = stockData['priceHistory'] as List<dynamic>?;
+
+    // Calculate percentage from price history if available
+    double calculatedChangePercent = changePercent;
+    if (priceHistory != null && priceHistory.length >= 2) {
+      final prices = priceHistory.map((p) => (p as num).toDouble()).toList();
+      final currentPrice = prices.last;
+      final previousPrice = prices[prices.length - 2];
+      calculatedChangePercent =
+          ((currentPrice - previousPrice) / previousPrice) * 100;
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         // Responsive sizing based on screen size
         final isDesktop = MediaQuery.of(context).size.width > 768;
-        final cardWidth = isDesktop ? 140.0 : 110.0; // Reduced mobile width
-        final cardHeight = isDesktop ? 90.0 : 75.0; // Reduced mobile height
-        
-        return Container(
-          width: cardWidth,
-          height: cardHeight,
-          margin: const EdgeInsets.only(right: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                symbol,
-                style: GoogleFonts.inter(
-                  fontSize: isDesktop ? 16 : 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+        final cardWidth = isDesktop
+            ? 160.0
+            : 140.0; // Increased for hover expansion
+        final cardHeight = isDesktop
+            ? 120.0
+            : 100.0; // Increased height for sparkline
+
+        return MouseRegion(
+          onEnter: (_) {
+            // Add hover effect - could trigger expansion animation
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: cardWidth,
+            height: cardHeight,
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
               ),
-              const SizedBox(height: 3),
-              Flexible(
-                child: Text(
-                  name,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  symbol,
                   style: GoogleFonts.inter(
-                    fontSize: isDesktop ? 12 : 9,
-                    color: Colors.white.withOpacity(0.7),
+                    fontSize: isDesktop ? 14 : 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
-                      '\$${price.toStringAsFixed(2)}',
-                      style: GoogleFonts.inter(
-                        fontSize: isDesktop ? 14 : 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                const SizedBox(height: 2),
+                Flexible(
+                  child: Text(
+                    name,
+                    style: GoogleFonts.inter(
+                      fontSize: isDesktop ? 10 : 8,
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Price History Sparkline
+                if (priceHistory != null && priceHistory.isNotEmpty)
+                  Expanded(
+                    child: SparklineWidget(
+                      prices: priceHistory
+                          .map((p) => (p as num).toDouble())
+                          .toList(),
+                      width: cardWidth - 16,
+                      height: 25,
+                      lineColor: calculatedChangePercent >= 0
+                          ? const Color(0xFF00FFA3)
+                          : Colors.red,
+                      fillColor: calculatedChangePercent >= 0
+                          ? const Color(0x1A00FFA3)
+                          : Colors.red.withOpacity(0.1),
+                      strokeWidth: 1.5,
+                    ),
+                  )
+                else
+                  Container(
+                    height: 25,
+                    width: cardWidth - 16,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        '—',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          change >= 0 ? Icons.trending_up : Icons.trending_down,
-                          size: isDesktop ? 12 : 8,
-                          color: change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '\$${price.toStringAsFixed(2)}',
+                        style: GoogleFonts.inter(
+                          fontSize: isDesktop ? 12 : 9,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${change >= 0 ? '+' : ''}${changePercent.toStringAsFixed(1)}%',
-                          style: GoogleFonts.inter(
-                            fontSize: isDesktop ? 12 : 9,
-                            color: change >= 0
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            calculatedChangePercent >= 0
+                                ? Icons.trending_up
+                                : Icons.trending_down,
+                            size: isDesktop ? 10 : 6,
+                            color: calculatedChangePercent >= 0
                                 ? const Color(0xFF00FFA3)
                                 : Colors.red,
-                            fontWeight: FontWeight.w500,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                          const SizedBox(width: 1),
+                          Text(
+                            '${calculatedChangePercent >= 0 ? '+' : ''}${calculatedChangePercent.toStringAsFixed(1)}%',
+                            style: GoogleFonts.inter(
+                              fontSize: isDesktop ? 10 : 8,
+                              color: calculatedChangePercent >= 0
+                                  ? const Color(0xFF00FFA3)
+                                  : Colors.red,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
-
 
   Widget _buildAchievementsSection() {
     return Column(
@@ -869,7 +943,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final isDesktop = MediaQuery.of(context).size.width > 768;
         final badgeWidth = isDesktop ? 90.0 : 80.0;
         final badgeHeight = isDesktop ? 60.0 : 50.0;
-        
+
         return Container(
           margin: const EdgeInsets.only(right: 12),
           width: badgeWidth,
