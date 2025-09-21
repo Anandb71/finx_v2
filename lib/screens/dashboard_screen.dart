@@ -496,57 +496,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuestCard(Quest quest) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(8), // Reduced padding
-      decoration: BoxDecoration(
-        color: quest.isCompleted
-            ? const Color(0xFF00FFA3).withOpacity(0.1)
-            : Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: quest.isCompleted
-              ? const Color(0xFF00FFA3).withOpacity(0.3)
-              : Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(quest.icon, style: const TextStyle(fontSize: 20)), // Reduced icon size
-          const SizedBox(width: 8), // Reduced spacing
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  quest.title,
-                  style: GoogleFonts.inter(
-                    fontSize: 12, // Reduced font size
-                    fontWeight: FontWeight.w500,
-                    color: quest.isCompleted
-                        ? const Color(0xFF00FFA3)
-                        : Colors.white,
-                  ),
-                ),
-                if (!quest.isCompleted) ...[
-                  const SizedBox(height: 2), // Reduced spacing
-                  LinearProgressIndicator(
-                    value: quest.progress,
-                    backgroundColor: Colors.white.withOpacity(0.1),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFF00FFA3),
-                    ),
-                  ),
-                ],
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing based on screen size
+        final isDesktop = MediaQuery.of(context).size.width > 768;
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(isDesktop ? 16 : 12),
+          decoration: BoxDecoration(
+            color: quest.isCompleted
+                ? const Color(0xFF00FFA3).withOpacity(0.1)
+                : Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: quest.isCompleted
+                  ? const Color(0xFF00FFA3).withOpacity(0.3)
+                  : Colors.white.withOpacity(0.1),
+              width: 1,
             ),
           ),
-          if (quest.isCompleted)
-            const Icon(Icons.check_circle, color: Color(0xFF00FFA3), size: 16), // Reduced icon size
-        ],
-      ),
+          child: Row(
+            children: [
+              Text(
+                quest.icon, 
+                style: TextStyle(fontSize: isDesktop ? 24 : 20)
+              ),
+              SizedBox(width: isDesktop ? 12 : 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      quest.title,
+                      style: GoogleFonts.inter(
+                        fontSize: isDesktop ? 14 : 12,
+                        fontWeight: FontWeight.w500,
+                        color: quest.isCompleted
+                            ? const Color(0xFF00FFA3)
+                            : Colors.white,
+                      ),
+                    ),
+                    if (!quest.isCompleted) ...[
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: quest.progress,
+                        backgroundColor: Colors.white.withOpacity(0.1),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF00FFA3),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (quest.isCompleted)
+                Icon(
+                  Icons.check_circle, 
+                  color: const Color(0xFF00FFA3), 
+                  size: isDesktop ? 20 : 16
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -579,70 +593,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildStockCard(Stock stock) {
-    return Container(
-      width: 100, // Reduced width
-      height: 70, // Reduced height
-      margin: const EdgeInsets.only(right: 8), // Reduced margin
-      padding: const EdgeInsets.all(6), // Further reduced padding
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8), // Reduced border radius
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            stock.symbol,
-            style: GoogleFonts.inter(
-              fontSize: 12, // Further reduced font size
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing based on screen size
+        final isDesktop = MediaQuery.of(context).size.width > 768;
+        final cardWidth = isDesktop ? 140.0 : 120.0;
+        final cardHeight = isDesktop ? 90.0 : 80.0;
+        
+        return Container(
+          width: cardWidth,
+          height: cardHeight,
+          margin: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
           ),
-          const SizedBox(height: 1), // Minimal spacing
-          Text(
-            stock.name,
-            style: GoogleFonts.inter(
-              fontSize: 8, // Further reduced font size
-              color: Colors.white.withOpacity(0.7),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
-          Text(
-            '\$${stock.price.toStringAsFixed(2)}',
-            style: GoogleFonts.inter(
-              fontSize: 10, // Further reduced font size
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 1), // Minimal spacing
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                stock.change >= 0 ? Icons.trending_up : Icons.trending_down,
-                color: stock.change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
-                size: 8, // Further reduced icon size
-              ),
-              const SizedBox(width: 1), // Minimal spacing
               Text(
-                '${stock.change >= 0 ? '+' : ''}${stock.changePercent.toStringAsFixed(1)}%',
+                stock.symbol,
                 style: GoogleFonts.inter(
-                  fontSize: 8, // Further reduced font size
-                  color: stock.change >= 0
-                      ? const Color(0xFF00FFA3)
-                      : Colors.red,
-                  fontWeight: FontWeight.w500,
+                  fontSize: isDesktop ? 16 : 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  stock.name,
+                  style: GoogleFonts.inter(
+                    fontSize: isDesktop ? 12 : 10,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Spacer(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '\$${stock.price.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      fontSize: isDesktop ? 14 : 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Icon(
+                        stock.change >= 0 ? Icons.trending_up : Icons.trending_down,
+                        size: isDesktop ? 12 : 10,
+                        color: stock.change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${stock.change >= 0 ? '+' : ''}${stock.changePercent.toStringAsFixed(1)}%',
+                        style: GoogleFonts.inter(
+                          fontSize: isDesktop ? 12 : 10,
+                          color: stock.change >= 0
+                              ? const Color(0xFF00FFA3)
+                              : Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -672,53 +701,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAchievementBadge(Achievement achievement) {
-    // FIXED: RenderFlex overflow - ultra compact design
-    return Container(
-      margin: const EdgeInsets.only(right: 8), // Reduced margin
-      width: 70, // Further reduced width
-      height: 45, // Further reduced height
-      padding: const EdgeInsets.all(4), // Minimal padding
-      decoration: BoxDecoration(
-        color: achievement.isEarned
-            ? const Color(0xFF00FFA3).withOpacity(0.1)
-            : Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8), // Reduced border radius
-        border: Border.all(
-          color: achievement.isEarned
-              ? const Color(0xFF00FFA3).withOpacity(0.3)
-              : Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            achievement.icon,
-            style: TextStyle(
-              fontSize: 14, // Further reduced font size
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing based on screen size
+        final isDesktop = MediaQuery.of(context).size.width > 768;
+        final badgeWidth = isDesktop ? 90.0 : 80.0;
+        final badgeHeight = isDesktop ? 60.0 : 50.0;
+        
+        return Container(
+          margin: const EdgeInsets.only(right: 12),
+          width: badgeWidth,
+          height: badgeHeight,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: achievement.isEarned
+                ? const Color(0xFF00FFA3).withOpacity(0.1)
+                : Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
               color: achievement.isEarned
-                  ? const Color(0xFF00FFA3)
-                  : Colors.white.withOpacity(0.3),
+                  ? const Color(0xFF00FFA3).withOpacity(0.3)
+                  : Colors.white.withOpacity(0.1),
+              width: 1,
             ),
           ),
-          const SizedBox(height: 1), // Minimal spacing
-          Text(
-            achievement.name,
-            style: GoogleFonts.inter(
-              fontSize: 7, // Ultra small font size
-              fontWeight: FontWeight.w500,
-              color: achievement.isEarned
-                  ? const Color(0xFF00FFA3)
-                  : Colors.white.withOpacity(0.5),
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1, // Single line only
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                achievement.icon,
+                style: TextStyle(
+                  fontSize: isDesktop ? 20 : 16,
+                  color: achievement.isEarned
+                      ? const Color(0xFF00FFA3)
+                      : Colors.white.withOpacity(0.3),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  achievement.name,
+                  style: GoogleFonts.inter(
+                    fontSize: isDesktop ? 10 : 8,
+                    fontWeight: FontWeight.w500,
+                    color: achievement.isEarned
+                        ? const Color(0xFF00FFA3)
+                        : Colors.white.withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
