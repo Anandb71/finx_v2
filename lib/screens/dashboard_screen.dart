@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/user_model.dart';
 import '../services/user_service.dart';
+import '../services/stock_service.dart';
 import 'trade_screen.dart';
 import 'analytics_screen.dart';
 import 'learn_screen.dart';
@@ -27,21 +28,6 @@ class Quest {
   });
 }
 
-class Stock {
-  final String symbol;
-  final String name;
-  final double price;
-  final double change;
-  final double changePercent;
-
-  Stock({
-    required this.symbol,
-    required this.name,
-    required this.price,
-    required this.change,
-    required this.changePercent,
-  });
-}
 
 class Achievement {
   final String name;
@@ -63,6 +49,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   UserModel? _userData;
   bool _isLoading = true;
   final UserService _userService = UserService();
+  final StockService _stockService = StockService();
+
+  // Stock data
+  List<Map<String, dynamic>> _stocks = [];
+  bool _stocksLoading = true;
 
   // Mock data for demonstration (will be replaced with real data)
   final double portfolioValue = 102500.00;
@@ -73,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    _loadStockData();
   }
 
   Future<void> _loadUserData() async {
@@ -88,9 +80,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       print('Error loading user data: $e');
+      
+      // If user document doesn't exist, try to create it
+      if (e.toString().contains('User document does not exist')) {
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            print('Creating missing user document...');
+            await _userService.createUserOnSignUp(
+              user.uid,
+              user.email ?? 'unknown@example.com',
+              displayName: user.displayName,
+            );
+            
+            // Try to load user data again
+            final userData = await _userService.getCurrentUserData();
+            if (mounted) {
+              setState(() {
+                _userData = userData;
+                _isLoading = false;
+              });
+            }
+            return;
+          }
+        } catch (createError) {
+          print('Error creating missing user document: $createError');
+        }
+      }
+      
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadStockData() async {
+    try {
+      final stocks = await _stockService.getAllStocks();
+      if (mounted) {
+        setState(() {
+          _stocks = stocks;
+          _stocksLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading stock data: $e');
+      if (mounted) {
+        setState(() {
+          _stocksLoading = false;
         });
       }
     }
@@ -164,37 +203,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
-  // Mock watchlist data
-  final List<Stock> watchlist = [
-    Stock(
-      symbol: "AAPL",
-      name: "Apple Inc.",
-      price: 175.43,
-      change: 2.34,
-      changePercent: 1.35,
-    ),
-    Stock(
-      symbol: "TSLA",
-      name: "Tesla Inc.",
-      price: 248.50,
-      change: -5.20,
-      changePercent: -2.05,
-    ),
-    Stock(
-      symbol: "GOOGL",
-      name: "Alphabet Inc.",
-      price: 142.56,
-      change: 1.23,
-      changePercent: 0.87,
-    ),
-    Stock(
-      symbol: "MSFT",
-      name: "Microsoft Corp.",
-      price: 378.85,
-      change: 3.45,
-      changePercent: 0.92,
-    ),
-  ];
 
   // Mock achievements
   final List<Achievement> achievements = [
@@ -680,20 +688,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 12),
         SizedBox(
           height: 80,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: watchlist.length,
-            itemBuilder: (context, index) {
-              final stock = watchlist[index];
-              return _buildStockCard(stock);
-            },
-          ),
+          child: _stocksLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFA3)),
+                  ),
+                )
+              : _stocks.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No stock data available',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _stocks.take(10).length, // Show first 10 stocks
+                      itemBuilder: (context, index) {
+                        final stockData = _stocks[index];
+                        return _buildStockCardFromData(stockData);
+                      },
+                    ),
         ),
       ],
     );
   }
 
-  Widget _buildStockCard(Stock stock) {
+  Widget _buildStockCardFromData(Map<String, dynamic> stockData) {
+    final symbol = stockData['symbol'] ?? 'N/A';
+    final name = stockData['name'] ?? 'Unknown Company';
+    final price = (stockData['price'] ?? 0.0).toDouble();
+    final change = (stockData['change'] ?? 0.0).toDouble();
+    final changePercent = (stockData['changePercent'] ?? 0.0).toDouble();
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // Responsive sizing based on screen size
@@ -716,7 +745,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                stock.symbol,
+                symbol,
                 style: GoogleFonts.inter(
                   fontSize: isDesktop ? 16 : 13,
                   fontWeight: FontWeight.bold,
@@ -726,7 +755,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 3),
               Flexible(
                 child: Text(
-                  stock.name,
+                  name,
                   style: GoogleFonts.inter(
                     fontSize: isDesktop ? 12 : 9,
                     color: Colors.white.withOpacity(0.7),
@@ -741,7 +770,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Flexible(
                     child: Text(
-                      '\$${stock.price.toStringAsFixed(2)}',
+                      '\$${price.toStringAsFixed(2)}',
                       style: GoogleFonts.inter(
                         fontSize: isDesktop ? 14 : 11,
                         fontWeight: FontWeight.bold,
@@ -756,16 +785,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          stock.change >= 0 ? Icons.trending_up : Icons.trending_down,
+                          change >= 0 ? Icons.trending_up : Icons.trending_down,
                           size: isDesktop ? 12 : 8,
-                          color: stock.change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
+                          color: change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          '${stock.change >= 0 ? '+' : ''}${stock.changePercent.toStringAsFixed(1)}%',
+                          '${change >= 0 ? '+' : ''}${changePercent.toStringAsFixed(1)}%',
                           style: GoogleFonts.inter(
                             fontSize: isDesktop ? 12 : 9,
-                            color: stock.change >= 0
+                            color: change >= 0
                                 ? const Color(0xFF00FFA3)
                                 : Colors.red,
                             fontWeight: FontWeight.w500,
@@ -783,6 +812,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
+
 
   Widget _buildAchievementsSection() {
     return Column(

@@ -87,6 +87,8 @@ class UserService {
   // Create user document on first sign up
   Future<void> createUserOnSignUp(String uid, String email, {String? displayName}) async {
     try {
+      print('Creating user document for UID: $uid, Email: $email');
+      
       final user = UserModel(
         uid: uid,
         email: email,
@@ -99,6 +101,7 @@ class UserService {
       );
 
       await createOrUpdateUser(user);
+      print('User document created successfully');
     } catch (e) {
       print('Error creating user on sign up: $e');
       throw e;
