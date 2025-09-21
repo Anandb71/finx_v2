@@ -386,114 +386,140 @@ class _LandingPageState extends State<LandingPage>
       children: [
         // Aurora glow effect
         _buildAuroraGlow(context),
-        // Main content
-        Column(
-          children: [
-            const Icon(
-              Icons.auto_graph_rounded,
-              color: Color(0xFF00FFA3),
-              size: 60,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Learn to Invest, The Fun Way.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 42,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -1.5,
-                color: Colors.white.withOpacity(0.9),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Simulate real-time stock trading with virtual money and AI-powered guidance.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                color: Theme.of(context).colorScheme.secondary,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 40),
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        // Main content - Centered and constrained
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Logo - Reduced size to act as accent
+                const Icon(
+                  Icons.auto_graph_rounded,
+                  color: Color(0xFF00FFA3),
+                  size: 40,
                 ),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00FFA3).withOpacity(0.4),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 8),
+                const SizedBox(height: 32), // Increased spacing
+                // Main Headline - Significantly larger and bolder
+                Text(
+                  'Learn to Invest, The Fun Way.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 56, // Increased from 42
+                    fontWeight: FontWeight.w800, // Increased from bold
+                    letterSpacing: -2.0, // Increased letter spacing
+                    color: Colors.white.withOpacity(
+                      0.95,
+                    ), // Slightly more opaque
+                    height: 1.1, // Tighter line height for impact
                   ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SignUpScreen(),
+                ),
+                const SizedBox(height: 24), // Increased spacing
+                // Sub-headline
+                Text(
+                  'Simulate real-time stock trading with virtual money and AI-powered guidance.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20, // Increased from 18
+                    color: Theme.of(context).colorScheme.secondary,
+                    height: 1.6, // Increased line height for readability
+                    fontWeight: FontWeight.w400, // Added slight weight
+                  ),
+                ),
+                const SizedBox(height: 48), // Increased spacing
+                // Get Started Button - Larger and more prominent
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.black,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
-                    vertical: 16,
+                    borderRadius: BorderRadius.circular(
+                      35,
+                    ), // Slightly more rounded
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(
+                          0xFF00FFA3,
+                        ).withOpacity(0.5), // Increased shadow opacity
+                        blurRadius: 25, // Increased blur
+                        spreadRadius: 0,
+                        offset: const Offset(0, 10), // Increased offset
+                      ),
+                    ],
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: const Text(
-                  'Get Started',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            RichText(
-              text: TextSpan(
-                text: 'Already have an account? ',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.secondary,
-                  fontSize: 16,
-                ),
-                children: [
-                  WidgetSpan(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Log In',
-                        style: TextStyle(
-                          color: const Color(0xFF00FFA3),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                          decorationColor: const Color(0xFF00FFA3),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SignUpScreen(),
                         ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.black,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 60, // Increased horizontal padding
+                        vertical: 20, // Increased vertical padding
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(35),
+                      ),
+                    ),
+                    child: const Text(
+                      'Get Started',
+                      style: TextStyle(
+                        fontSize: 22, // Increased from 18
+                        fontWeight: FontWeight.w700, // Increased weight
+                        letterSpacing: 0.5, // Added letter spacing
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 32), // Increased spacing
+                // Log In Link - Enhanced styling
+                RichText(
+                  text: TextSpan(
+                    text: 'Already have an account? ',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.secondary,
+                      fontSize: 18, // Increased from 16
+                      fontWeight: FontWeight.w400,
+                    ),
+                    children: [
+                      WidgetSpan(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Log In',
+                            style: TextStyle(
+                              color: const Color(0xFF00FFA3),
+                              fontSize: 18, // Increased from 16
+                              fontWeight: FontWeight.w700, // Increased weight
+                              decoration: TextDecoration.underline,
+                              decorationColor: const Color(0xFF00FFA3),
+                              decorationThickness: 2, // Thicker underline
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );
