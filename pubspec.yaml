@@ -42,6 +42,9 @@ dependencies:
   
   # Google Fonts
   google_fonts: ^6.2.1
+  
+  # State Management
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:

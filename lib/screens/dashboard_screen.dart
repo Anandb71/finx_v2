@@ -1,12 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../models/user_model.dart';
-import '../services/user_service.dart';
 import '../services/stock_service.dart';
-import '../widgets/sparkline_widget.dart';
-import '../widgets/expandable_stock_card.dart';
-import 'trade_screen.dart';
+import '../services/portfolio_provider.dart';
+import '../widgets/modern_stock_card.dart';
+import 'modern_trade_screen.dart';
 import 'analytics_screen.dart';
 import 'learn_screen.dart';
 import 'leaderboard_screen.dart';
@@ -49,7 +49,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // User data
   UserModel? _userData;
   bool _isLoading = true;
-  final UserService _userService = UserService();
   final StockService _stockService = StockService();
 
   // Stock data - now using StreamBuilder, no need for state variables
@@ -66,6 +65,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadUserData() async {
+    // For now, skip Firebase loading since user data is empty
+    // This allows the app to work with local portfolio data only
+    print('Skipping Firebase user data loading for trial run');
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+
+    // TODO: Re-enable Firebase loading when user data is available
+    /*
     try {
       // Get full user data for all features
       final userData = await _userService.getCurrentUserData();
@@ -112,6 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     }
+    */
   }
 
   // Get user display name from Firestore data or fallback to Auth
@@ -306,93 +318,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Portfolio Overview Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFF00FFA3).withOpacity(0.2),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 15,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF00FFA3).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.account_balance_wallet,
-                                color: Color(0xFF00FFA3),
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              'Portfolio Value',
-                              style: GoogleFonts.inter(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '\$${portfolioValue.toStringAsFixed(2)}',
-                          style: GoogleFonts.inter(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF00FFA3),
+                  // Dynamic Portfolio Overview Card
+                  Consumer<PortfolioProvider>(
+                    builder: (context, portfolio, child) {
+                      final totalValue = portfolio.totalPortfolioValue;
+                      final gainLoss = portfolio.totalGainLoss;
+                      final gainLossPercent = portfolio.totalGainLossPercentage;
+
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFF00FFA3).withOpacity(0.2),
+                            width: 1,
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              dailyChange >= 0
-                                  ? Icons.trending_up
-                                  : Icons.trending_down,
-                              color: dailyChange >= 0
-                                  ? const Color(0xFF00FFA3)
-                                  : Colors.red,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${dailyChange >= 0 ? '+' : ''}\$${dailyChange.abs().toStringAsFixed(2)} (${dailyChangePercent >= 0 ? '+' : ''}${dailyChangePercent.toStringAsFixed(1)}%)',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: dailyChange >= 0
-                                    ? const Color(0xFF00FFA3)
-                                    : Colors.red,
-                                fontWeight: FontWeight.w500,
-                              ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 15,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        // Mini Sparkline Chart
-                        _buildSparklineChart(),
-                      ],
-                    ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF00FFA3,
+                                    ).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.account_balance_wallet,
+                                    color: Color(0xFF00FFA3),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  'Portfolio Value',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '\$${totalValue.toStringAsFixed(2)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF00FFA3),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  gainLoss >= 0
+                                      ? Icons.trending_up
+                                      : Icons.trending_down,
+                                  color: gainLoss >= 0
+                                      ? const Color(0xFF00FFA3)
+                                      : Colors.red,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.abs().toStringAsFixed(2)} (${gainLossPercent >= 0 ? '+' : ''}${gainLossPercent.toStringAsFixed(1)}%)',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: gainLoss >= 0
+                                        ? const Color(0xFF00FFA3)
+                                        : Colors.red,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // Mini Sparkline Chart
+                            _buildSparklineChart(),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -427,11 +449,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   title: 'Trade',
                                   subtitle: 'Your top mover: TSLA +7.1%',
                                   onTap: () {
+                                    // This will be replaced with actual stock data
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) =>
-                                            const TradeScreen(),
+                                        builder: (context) => ModernTradeScreen(
+                                          stockData: {
+                                            'symbol': 'TSLA',
+                                            'name': 'Tesla Inc.',
+                                            'currentPrice': 248.50,
+                                            'changePercent': 7.1,
+                                          },
+                                        ),
                                       ),
                                     );
                                   },
@@ -578,7 +607,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         ...dailyQuests.map((quest) => _buildQuestCard(quest)).toList(),
       ],
     );
@@ -591,13 +620,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final isDesktop = MediaQuery.of(context).size.width > 768;
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: EdgeInsets.all(isDesktop ? 16 : 12),
+          margin: const EdgeInsets.only(bottom: 2), // Even more reduced
+          padding: EdgeInsets.all(
+            isDesktop ? 8 : 4,
+          ), // Even more reduced padding
           decoration: BoxDecoration(
             color: quest.isCompleted
                 ? const Color(0xFF00FFA3).withOpacity(0.1)
                 : Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8), // Even more reduced
             border: Border.all(
               color: quest.isCompleted
                   ? const Color(0xFF00FFA3).withOpacity(0.3)
@@ -607,8 +638,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Row(
             children: [
-              Text(quest.icon, style: TextStyle(fontSize: isDesktop ? 24 : 20)),
-              SizedBox(width: isDesktop ? 12 : 8),
+              Text(
+                quest.icon,
+                style: TextStyle(fontSize: isDesktop ? 16 : 12), // Even smaller
+              ),
+              SizedBox(width: isDesktop ? 4 : 2), // Even smaller spacing
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,21 +651,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(
                       quest.title,
                       style: GoogleFonts.inter(
-                        fontSize: isDesktop ? 14 : 12,
+                        fontSize: isDesktop ? 10 : 8, // Even smaller font
                         fontWeight: FontWeight.w500,
                         color: quest.isCompleted
                             ? const Color(0xFF00FFA3)
                             : Colors.white,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (!quest.isCompleted) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 0), // No spacing
                       LinearProgressIndicator(
                         value: quest.progress,
                         backgroundColor: Colors.white.withOpacity(0.1),
                         valueColor: const AlwaysStoppedAnimation<Color>(
                           Color(0xFF00FFA3),
                         ),
+                        minHeight: 1, // Very thin
                       ),
                     ],
                   ],
@@ -641,7 +678,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icon(
                   Icons.check_circle,
                   color: const Color(0xFF00FFA3),
-                  size: isDesktop ? 20 : 16,
+                  size: isDesktop ? 16 : 12, // Even smaller
                 ),
             ],
           ),
@@ -654,21 +691,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Market Movers',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        Row(
+          children: [
+            Icon(Icons.trending_up, color: const Color(0xFF00FFA3), size: 24),
+            const SizedBox(width: 12),
+            Text(
+              'Market Movers',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FFA3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF00FFA3).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'Live',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF00FFA3),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height:
-              150, // Increased height to accommodate expandable cards with sparklines
+        const SizedBox(height: 16),
+        Container(
+          height: 300, // Increased height for bigger cards with bigger graphs
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.02),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.05), width: 1),
+          ),
           child: StreamBuilder<List<Map<String, dynamic>>>(
             stream: _stockService.getStocksStream(),
             builder: (context, snapshot) {
+              print(
+                'Market Movers StreamBuilder - ConnectionState: ${snapshot.connectionState}',
+              );
+              print(
+                'Market Movers StreamBuilder - HasError: ${snapshot.hasError}',
+              );
+              print(
+                'Market Movers StreamBuilder - HasData: ${snapshot.hasData}',
+              );
+              if (snapshot.hasData) {
+                print('Market Movers Data: ${snapshot.data?.length} stocks');
+              }
+
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                   child: CircularProgressIndicator(
@@ -680,6 +760,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
 
               if (snapshot.hasError) {
+                print('Market Movers Error: ${snapshot.error}');
                 return Center(
                   child: Text(
                     'Error loading stocks: ${snapshot.error}',
@@ -702,189 +783,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
 
               final stocks = snapshot.data!;
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: stocks.take(10).length, // Show first 10 stocks
-                itemBuilder: (context, index) {
-                  final stockData = stocks[index];
-                  final isDesktop = MediaQuery.of(context).size.width > 768;
-                  return ExpandableStockCard(
-                    stockData: stockData,
-                    isDesktop: isDesktop,
-                  );
-                },
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: stocks.take(10).length, // Show first 10 stocks
+                  itemBuilder: (context, index) {
+                    final stockData = stocks[index];
+                    final isDesktop = MediaQuery.of(context).size.width > 768;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: ModernStockCard(
+                        stockData: stockData,
+                        isDesktop: isDesktop,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ModernTradeScreen(stockData: stockData),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
               );
             },
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildStockCardFromData(Map<String, dynamic> stockData) {
-    final symbol = stockData['symbol'] ?? 'N/A';
-    final name = stockData['name'] ?? 'Unknown Company';
-    final price = (stockData['currentPrice'] ?? 0.0).toDouble();
-    final change = (stockData['change'] ?? 0.0).toDouble();
-    final changePercent = (stockData['changePercent'] ?? 0.0).toDouble();
-    final priceHistory = stockData['priceHistory'] as List<dynamic>?;
-
-    // Calculate percentage from price history if available
-    double calculatedChangePercent = changePercent;
-    if (priceHistory != null && priceHistory.length >= 2) {
-      final prices = priceHistory.map((p) => (p as num).toDouble()).toList();
-      final currentPrice = prices.last;
-      final previousPrice = prices[prices.length - 2];
-      calculatedChangePercent =
-          ((currentPrice - previousPrice) / previousPrice) * 100;
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Responsive sizing based on screen size
-        final isDesktop = MediaQuery.of(context).size.width > 768;
-        final cardWidth = isDesktop
-            ? 160.0
-            : 140.0; // Increased for hover expansion
-        final cardHeight = isDesktop
-            ? 120.0
-            : 100.0; // Increased height for sparkline
-
-        return MouseRegion(
-          onEnter: (_) {
-            // Add hover effect - could trigger expansion animation
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: cardWidth,
-            height: cardHeight,
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  symbol,
-                  style: GoogleFonts.inter(
-                    fontSize: isDesktop ? 14 : 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Flexible(
-                  child: Text(
-                    name,
-                    style: GoogleFonts.inter(
-                      fontSize: isDesktop ? 10 : 8,
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Price History Sparkline
-                if (priceHistory != null && priceHistory.isNotEmpty)
-                  Expanded(
-                    child: SparklineWidget(
-                      prices: priceHistory
-                          .map((p) => (p as num).toDouble())
-                          .toList(),
-                      width: cardWidth - 16,
-                      height: 25,
-                      lineColor: calculatedChangePercent >= 0
-                          ? const Color(0xFF00FFA3)
-                          : Colors.red,
-                      fillColor: calculatedChangePercent >= 0
-                          ? const Color(0x1A00FFA3)
-                          : Colors.red.withOpacity(0.1),
-                      strokeWidth: 1.5,
-                    ),
-                  )
-                else
-                  Container(
-                    height: 25,
-                    width: cardWidth - 16,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '—',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        '\$${price.toStringAsFixed(2)}',
-                        style: GoogleFonts.inter(
-                          fontSize: isDesktop ? 12 : 9,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Flexible(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            calculatedChangePercent >= 0
-                                ? Icons.trending_up
-                                : Icons.trending_down,
-                            size: isDesktop ? 10 : 6,
-                            color: calculatedChangePercent >= 0
-                                ? const Color(0xFF00FFA3)
-                                : Colors.red,
-                          ),
-                          const SizedBox(width: 1),
-                          Text(
-                            '${calculatedChangePercent >= 0 ? '+' : ''}${calculatedChangePercent.toStringAsFixed(1)}%',
-                            style: GoogleFonts.inter(
-                              fontSize: isDesktop ? 10 : 8,
-                              color: calculatedChangePercent >= 0
-                                  ? const Color(0xFF00FFA3)
-                                  : Colors.red,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1054,7 +983,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final maxValue = sparklineData.reduce((a, b) => a > b ? a : b);
 
     return Container(
-      height: 40,
+      height: 60,
       width: double.infinity,
       child: CustomPaint(
         painter: SparklinePainter(
