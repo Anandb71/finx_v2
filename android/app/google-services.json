@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "594366773091",
+    "project_id": "finx-aff21",
+    "storage_bucket": "finx-aff21.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:594366773091:android:788c1c702e1d95b1e5c556",
+        "android_client_info": {
+          "package_name": "com.example.finx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDr_gxAp0KHlv9cuidvbKphYLtQnOlxkJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
