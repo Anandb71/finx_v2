@@ -3,29 +3,39 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 
 class UserService {
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Get current user data from Firestore
-  static Future<UserModel?> getCurrentUserData() async {
+  /// Fetches the current logged-in user's document from the 'users' collection.
+  ///
+  /// Throws an exception if no user is currently logged in.
+  Future<DocumentSnapshot<Map<String, dynamic>>> getUserData() async {
+    final User? currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw Exception("No user is currently logged in.");
+    }
+
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        print('No user logged in');
-        return null;
-      }
+      final DocumentSnapshot<Map<String, dynamic>> userDoc =
+          await _firestore.collection('users').doc(currentUser.uid).get();
 
-      final doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      if (doc.exists) {
-        return UserModel.fromFirestore(doc.data()!, doc.id);
-      } else {
-        print('User document does not exist');
-        return null;
+      if (!userDoc.exists) {
+        throw Exception("User document does not exist.");
       }
+      
+      return userDoc;
+    } catch (e) {
+      // Re-throw the exception to be handled by the UI
+      throw Exception("Error fetching user data: $e");
+    }
+  }
+
+  // Get current user data from Firestore (keeping the old method for compatibility)
+  Future<UserModel?> getCurrentUserData() async {
+    try {
+      final userDoc = await getUserData();
+      return UserModel.fromFirestore(userDoc.data()!, userDoc.id);
     } catch (e) {
       print('Error fetching user data: $e');
       return null;
@@ -33,7 +43,7 @@ class UserService {
   }
 
   // Create or update user document in Firestore
-  static Future<void> createOrUpdateUser(UserModel user) async {
+  Future<void> createOrUpdateUser(UserModel user) async {
     try {
       await _firestore
           .collection('users')
@@ -46,7 +56,7 @@ class UserService {
   }
 
   // Create user document on first sign up
-  static Future<void> createUserOnSignUp(String uid, String email, {String? displayName}) async {
+  Future<void> createUserOnSignUp(String uid, String email, {String? displayName}) async {
     try {
       final user = UserModel(
         uid: uid,
@@ -67,7 +77,7 @@ class UserService {
   }
 
   // Update user's last login time
-  static Future<void> updateLastLogin(String uid) async {
+  Future<void> updateLastLogin(String uid) async {
     try {
       await _firestore
           .collection('users')
@@ -81,7 +91,7 @@ class UserService {
   }
 
   // Update user's portfolio value
-  static Future<void> updatePortfolioValue(String uid, double newValue) async {
+  Future<void> updatePortfolioValue(String uid, double newValue) async {
     try {
       await _firestore
           .collection('users')
@@ -96,7 +106,7 @@ class UserService {
   }
 
   // Update user's level and experience
-  static Future<void> updateLevelAndExperience(String uid, int level, int experience) async {
+  Future<void> updateLevelAndExperience(String uid, int level, int experience) async {
     try {
       await _firestore
           .collection('users')
@@ -112,7 +122,7 @@ class UserService {
   }
 
   // Get user data by UID
-  static Future<UserModel?> getUserData(String uid) async {
+  Future<UserModel?> getUserDataByUid(String uid) async {
     try {
       final doc = await _firestore
           .collection('users')
@@ -131,7 +141,7 @@ class UserService {
   }
 
   // Stream user data for real-time updates
-  static Stream<UserModel?> getUserDataStream(String uid) {
+  Stream<UserModel?> getUserDataStream(String uid) {
     return _firestore
         .collection('users')
         .doc(uid)

@@ -27,14 +27,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       // Create user document in Firestore
       if (userCredential.user != null) {
-        await UserService.createUserOnSignUp(
+        final userService = UserService();
+        await userService.createUserOnSignUp(
           userCredential.user!.uid,
           _emailController.text.trim(),
           displayName: userCredential.user!.displayName,

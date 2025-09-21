@@ -62,6 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // User data
   UserModel? _userData;
   bool _isLoading = true;
+  final UserService _userService = UserService();
 
   // Mock data for demonstration (will be replaced with real data)
   final double portfolioValue = 102500.00;
@@ -76,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final userData = await UserService.getCurrentUserData();
+      final userData = await _userService.getCurrentUserData();
       if (mounted) {
         setState(() {
           _userData = userData;
