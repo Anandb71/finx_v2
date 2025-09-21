@@ -597,8 +597,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, constraints) {
         // Responsive sizing based on screen size
         final isDesktop = MediaQuery.of(context).size.width > 768;
-        final cardWidth = isDesktop ? 140.0 : 120.0;
-        final cardHeight = isDesktop ? 90.0 : 80.0;
+        final cardWidth = isDesktop ? 140.0 : 110.0; // Reduced mobile width
+        final cardHeight = isDesktop ? 90.0 : 75.0; // Reduced mobile height
         
         return Container(
           width: cardWidth,
@@ -617,17 +617,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text(
                 stock.symbol,
                 style: GoogleFonts.inter(
-                  fontSize: isDesktop ? 16 : 14,
+                  fontSize: isDesktop ? 16 : 13,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Flexible(
                 child: Text(
                   stock.name,
                   style: GoogleFonts.inter(
-                    fontSize: isDesktop ? 12 : 10,
+                    fontSize: isDesktop ? 12 : 9,
                     color: Colors.white.withOpacity(0.7),
                   ),
                   maxLines: 2,
@@ -638,33 +638,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '\$${stock.price.toStringAsFixed(2)}',
-                    style: GoogleFonts.inter(
-                      fontSize: isDesktop ? 14 : 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  Flexible(
+                    child: Text(
+                      '\$${stock.price.toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(
+                        fontSize: isDesktop ? 14 : 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        stock.change >= 0 ? Icons.trending_up : Icons.trending_down,
-                        size: isDesktop ? 12 : 10,
-                        color: stock.change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${stock.change >= 0 ? '+' : ''}${stock.changePercent.toStringAsFixed(1)}%',
-                        style: GoogleFonts.inter(
-                          fontSize: isDesktop ? 12 : 10,
-                          color: stock.change >= 0
-                              ? const Color(0xFF00FFA3)
-                              : Colors.red,
-                          fontWeight: FontWeight.w500,
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          stock.change >= 0 ? Icons.trending_up : Icons.trending_down,
+                          size: isDesktop ? 12 : 8,
+                          color: stock.change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 2),
+                        Text(
+                          '${stock.change >= 0 ? '+' : ''}${stock.changePercent.toStringAsFixed(1)}%',
+                          style: GoogleFonts.inter(
+                            fontSize: isDesktop ? 12 : 9,
+                            color: stock.change >= 0
+                                ? const Color(0xFF00FFA3)
+                                : Colors.red,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
