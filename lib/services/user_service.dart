@@ -31,6 +31,35 @@ class UserService {
     }
   }
 
+  /// Gets the user's display name from the Firestore document.
+  /// Returns a fallback name if the document doesn't exist or name is not found.
+  Future<String> getUserDisplayName() async {
+    try {
+      final userDoc = await getUserData();
+      final data = userDoc.data()!;
+      
+      // Try to get firstName + lastName first
+      if (data['firstName'] != null && data['lastName'] != null) {
+        return '${data['firstName']} ${data['lastName']}';
+      }
+      
+      // Fallback to displayName
+      if (data['displayName'] != null && data['displayName'].toString().isNotEmpty) {
+        return data['displayName'];
+      }
+      
+      // Fallback to email username
+      if (data['email'] != null) {
+        return data['email'].toString().split('@')[0];
+      }
+      
+      return "Trader";
+    } catch (e) {
+      print('Error getting user display name: $e');
+      return "Trader";
+    }
+  }
+
   // Get current user data from Firestore (keeping the old method for compatibility)
   Future<UserModel?> getCurrentUserData() async {
     try {

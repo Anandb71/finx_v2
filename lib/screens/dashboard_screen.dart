@@ -77,7 +77,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadUserData() async {
     try {
+      // Get full user data for all features
       final userData = await _userService.getCurrentUserData();
+      
       if (mounted) {
         setState(() {
           _userData = userData;
