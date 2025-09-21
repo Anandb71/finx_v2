@@ -580,13 +580,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildStockCard(Stock stock) {
     return Container(
-      width: 120,
-      height: 80, // Fixed height to prevent overflow
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(8), // Reduced padding
+      width: 100, // Reduced width
+      height: 70, // Reduced height
+      margin: const EdgeInsets.only(right: 8), // Reduced margin
+      padding: const EdgeInsets.all(6), // Further reduced padding
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8), // Reduced border radius
         border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
       ),
       child: Column(
@@ -596,16 +596,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(
             stock.symbol,
             style: GoogleFonts.inter(
-              fontSize: 14, // Reduced font size
+              fontSize: 12, // Further reduced font size
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 2), // Reduced spacing
+          const SizedBox(height: 1), // Minimal spacing
           Text(
             stock.name,
             style: GoogleFonts.inter(
-              fontSize: 10, // Reduced font size
+              fontSize: 8, // Further reduced font size
               color: Colors.white.withOpacity(0.7),
             ),
             maxLines: 1,
@@ -615,24 +615,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(
             '\$${stock.price.toStringAsFixed(2)}',
             style: GoogleFonts.inter(
-              fontSize: 12, // Reduced font size
+              fontSize: 10, // Further reduced font size
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 1), // Reduced spacing
+          const SizedBox(height: 1), // Minimal spacing
           Row(
             children: [
               Icon(
                 stock.change >= 0 ? Icons.trending_up : Icons.trending_down,
                 color: stock.change >= 0 ? const Color(0xFF00FFA3) : Colors.red,
-                size: 10, // Reduced icon size
+                size: 8, // Further reduced icon size
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 1), // Minimal spacing
               Text(
                 '${stock.change >= 0 ? '+' : ''}${stock.changePercent.toStringAsFixed(1)}%',
                 style: GoogleFonts.inter(
-                  fontSize: 10, // Reduced font size
+                  fontSize: 8, // Further reduced font size
                   color: stock.change >= 0
                       ? const Color(0xFF00FFA3)
                       : Colors.red,
@@ -672,17 +672,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAchievementBadge(Achievement achievement) {
-    // FIXED: RenderFlex overflow by 25 pixels - using SizedBox with fixed height
+    // FIXED: RenderFlex overflow - ultra compact design
     return Container(
-      margin: const EdgeInsets.only(right: 12),
-      width: 80, // Fixed width
-      height: 50, // Fixed height to prevent overflow
-      padding: const EdgeInsets.all(6), // Further reduced padding
+      margin: const EdgeInsets.only(right: 8), // Reduced margin
+      width: 70, // Further reduced width
+      height: 45, // Further reduced height
+      padding: const EdgeInsets.all(4), // Minimal padding
       decoration: BoxDecoration(
         color: achievement.isEarned
             ? const Color(0xFF00FFA3).withOpacity(0.1)
             : Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8), // Reduced border radius
         border: Border.all(
           color: achievement.isEarned
               ? const Color(0xFF00FFA3).withOpacity(0.3)
@@ -697,7 +697,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(
             achievement.icon,
             style: TextStyle(
-              fontSize: 16, // Further reduced font size
+              fontSize: 14, // Further reduced font size
               color: achievement.isEarned
                   ? const Color(0xFF00FFA3)
                   : Colors.white.withOpacity(0.3),
@@ -707,7 +707,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(
             achievement.name,
             style: GoogleFonts.inter(
-              fontSize: 8, // Further reduced font size
+              fontSize: 7, // Ultra small font size
               fontWeight: FontWeight.w500,
               color: achievement.isEarned
                   ? const Color(0xFF00FFA3)
