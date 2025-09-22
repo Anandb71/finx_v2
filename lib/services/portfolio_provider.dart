@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
+import 'dart:async';
 import '../models/achievement.dart';
 import '../models/challenge.dart';
 import '../services/achievement_service.dart';
 import '../services/challenge_service.dart';
+import '../services/real_time_data_service.dart';
 
 class PortfolioProvider extends ChangeNotifier {
   // Starting virtual cash
@@ -52,7 +54,10 @@ class PortfolioProvider extends ChangeNotifier {
   // Purchase prices for each stock (for P&L calculations)
   final Map<String, double> _purchasePrices = {};
 
-  // Current stock prices (mock data for now)
+  // Real-time data service
+  final RealTimeDataService _realTimeService = RealTimeDataService();
+
+  // Current stock prices (real-time data)
   Map<String, double> _currentPrices = {
     'AAPL': 175.43,
     'GOOGL': 142.56,
@@ -65,6 +70,10 @@ class PortfolioProvider extends ChangeNotifier {
     'AMD': 128.45,
     'INTC': 43.21,
   };
+
+  // Real-time update timer
+  Timer? _realTimeTimer;
+  bool _isRealTimeEnabled = true;
 
   // Getters
   double get virtualCash => _virtualCash;
@@ -155,9 +164,9 @@ class PortfolioProvider extends ChangeNotifier {
 
   // Get gain/loss percentage
   double get totalGainLossPercentage {
-    if (totalGainLoss == 0) return 0.0;
-    final totalInvested = 100000.00 - _virtualCash + totalGainLoss;
-    return (totalGainLoss / totalInvested) * 100;
+    final totalInvested = 100000.00; // Starting amount
+    final currentValue = totalPortfolioValue;
+    return ((currentValue - totalInvested) / totalInvested) * 100;
   }
 
   // Execute a trade
@@ -264,6 +273,87 @@ class PortfolioProvider extends ChangeNotifier {
   void updateStockPrice(String symbol, double newPrice) {
     _currentPrices[symbol] = newPrice;
     notifyListeners();
+  }
+
+  // Initialize real-time updates
+  void initializeRealTimeUpdates() {
+    if (!_isRealTimeEnabled) return;
+
+    // Start real-time timer (update every 30 seconds)
+    _realTimeTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _updateAllStockPrices(),
+    );
+
+    // Initial update
+    _updateAllStockPrices();
+  }
+
+  // Stop real-time updates
+  void stopRealTimeUpdates() {
+    _realTimeTimer?.cancel();
+    _realTimeTimer = null;
+  }
+
+  // Toggle real-time updates
+  void toggleRealTimeUpdates() {
+    _isRealTimeEnabled = !_isRealTimeEnabled;
+    if (_isRealTimeEnabled) {
+      initializeRealTimeUpdates();
+    } else {
+      stopRealTimeUpdates();
+    }
+    notifyListeners();
+  }
+
+  // Get real-time status
+  bool get isRealTimeEnabled => _isRealTimeEnabled;
+
+  // Update all stock prices from real-time service
+  Future<void> _updateAllStockPrices() async {
+    if (!_isRealTimeEnabled) return;
+
+    try {
+      // Get all symbols in portfolio plus some popular ones
+      final symbols = <String>{
+        ..._portfolio.keys,
+        'AAPL',
+        'GOOGL',
+        'MSFT',
+        'TSLA',
+        'AMZN',
+        'META',
+        'NVDA',
+        'NFLX',
+        'AMD',
+        'INTC',
+      };
+
+      final stockData = await _realTimeService.getMultipleStocks(
+        symbols.toList(),
+      );
+
+      bool hasUpdates = false;
+      for (final entry in stockData.entries) {
+        final symbol = entry.key;
+        final data = entry.value;
+
+        if (data.currentPrice > 0 &&
+            _currentPrices[symbol] != data.currentPrice) {
+          _currentPrices[symbol] = data.currentPrice;
+          hasUpdates = true;
+        }
+      }
+
+      if (hasUpdates) {
+        print('🔄 Real-time update: Portfolio prices updated');
+        // Update portfolio value history
+        updatePortfolioValueHistory();
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error updating real-time prices: $e');
+    }
   }
 
   // Get recent transactions
@@ -749,6 +839,13 @@ class PortfolioProvider extends ChangeNotifier {
     if (_userLevel <= 15) return 'Market Analyst';
     if (_userLevel <= 20) return 'Portfolio Manager';
     return 'Investment Master';
+  }
+
+  // Dispose method to clean up resources
+  @override
+  void dispose() {
+    _realTimeTimer?.cancel();
+    super.dispose();
   }
 
   // Reset portfolio (for testing) - also reset XP and achievements

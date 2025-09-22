@@ -66,6 +66,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    _initializeRealTimeUpdates();
+  }
+
+  void _initializeRealTimeUpdates() {
+    // Initialize real-time portfolio updates
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final portfolio = context.read<PortfolioProvider>();
+      portfolio.initializeRealTimeUpdates();
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -248,6 +257,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         actions: [
+          Consumer<PortfolioProvider>(
+            builder: (context, portfolio, child) {
+              return IconButton(
+                onPressed: () {
+                  portfolio.toggleRealTimeUpdates();
+                },
+                icon: Icon(
+                  portfolio.isRealTimeEnabled ? Icons.wifi : Icons.wifi_off,
+                  color: portfolio.isRealTimeEnabled
+                      ? Colors.green
+                      : Colors.grey,
+                ),
+                tooltip: portfolio.isRealTimeEnabled
+                    ? 'Disable Real-time Updates'
+                    : 'Enable Real-time Updates',
+              );
+            },
+          ),
           // Global Refresh Button
           GestureDetector(
             onTap: () {
@@ -436,13 +463,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(
-                                '\$${totalValue.toStringAsFixed(2)}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF00FFA3),
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '\$${totalValue.toStringAsFixed(2)}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF00FFA3),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Consumer<PortfolioProvider>(
+                                    builder: (context, portfolio, child) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: portfolio.isRealTimeEnabled
+                                              ? Colors.green.withOpacity(0.2)
+                                              : Colors.grey.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: portfolio.isRealTimeEnabled
+                                                ? Colors.green
+                                                : Colors.grey,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.wifi,
+                                              size: 12,
+                                              color: portfolio.isRealTimeEnabled
+                                                  ? Colors.green
+                                                  : Colors.grey,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'LIVE',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    portfolio.isRealTimeEnabled
+                                                    ? Colors.green
+                                                    : Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 4),
                               Row(
@@ -499,186 +580,191 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return Column(
-                        children: [
-                          Row(
+                  Consumer<PortfolioProvider>(
+                    builder: (context, portfolio, child) {
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Column(
                             children: [
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.trending_up,
-                                  title: 'Trade',
-                                  subtitle: 'Your top mover: TSLA +7.1%',
-                                  onTap: () {
-                                    // This will be replaced with actual stock data
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ModernTradeScreen(
-                                          stockData: {
-                                            'symbol': 'TSLA',
-                                            'name': 'Tesla Inc.',
-                                            'currentPrice': 248.50,
-                                            'changePercent': 7.1,
-                                          },
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.trending_up,
+                                      title: 'Trade',
+                                      subtitle: _getTopMoverText(),
+                                      onTap: () {
+                                        // This will be replaced with actual stock data
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ModernTradeScreen(
+                                                  stockData: {
+                                                    'symbol': 'TSLA',
+                                                    'name': 'Tesla Inc.',
+                                                    'currentPrice': 248.50,
+                                                    'changePercent': 7.1,
+                                                  },
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.analytics,
+                                      title: 'Analytics',
+                                      subtitle: _getPortfolioChangeText(),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const AnalyticsScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.analytics,
-                                  title: 'Analytics',
-                                  subtitle: 'Portfolio up 2.5% today',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const AnalyticsScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.school,
+                                      title: 'Learn',
+                                      subtitle: _getNextLessonText(),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const LearnScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.leaderboard,
+                                      title: 'Leaderboard',
+                                      subtitle: _getLeaderboardRankText(),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const LeaderboardScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.account_balance_wallet,
+                                      title: 'Portfolio',
+                                      subtitle: _getPortfolioSummaryText(),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const PortfolioScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.emoji_events,
+                                      title: 'Achievements',
+                                      subtitle: _getAchievementsText(),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const AchievementsScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.api,
+                                      title: 'API Test',
+                                      subtitle: 'Test Finnhub integration',
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const ApiTestScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.bug_report,
+                                      title: 'Functionality Test',
+                                      subtitle: 'Test all app features',
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const FunctionalityTestScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildDynamicActionCard(
+                                      icon: Icons.settings,
+                                      title: 'Settings',
+                                      subtitle: 'Customize your experience',
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const SettingsScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.school,
-                                  title: 'Learn',
-                                  subtitle: 'Next lesson: What is an ETF?',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const LearnScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.leaderboard,
-                                  title: 'Leaderboard',
-                                  subtitle: 'Your Rank: #125 ▲',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const LeaderboardScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.account_balance_wallet,
-                                  title: 'Portfolio',
-                                  subtitle: 'View your holdings',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const PortfolioScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.emoji_events,
-                                  title: 'Achievements',
-                                  subtitle: '3 badges earned',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const AchievementsScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.api,
-                                  title: 'API Test',
-                                  subtitle: 'Test Finnhub integration',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ApiTestScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.bug_report,
-                                  title: 'Functionality Test',
-                                  subtitle: 'Test all app features',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const FunctionalityTestScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildDynamicActionCard(
-                                  icon: Icons.settings,
-                                  title: 'Settings',
-                                  subtitle: 'Customize your experience',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const SettingsScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                          );
+                        },
                       );
                     },
                   ),
@@ -871,21 +957,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showMascotPopup(MascotTrigger trigger) {
-    // Use the global mascot popup system
-    GlobalMascotManager.showMascotPopup(trigger);
-  }
-
   Widget _buildQuestCard(Quest quest, PortfolioProvider portfolio) {
     // Calculate real quest progress based on portfolio data
     double progress = _calculateQuestProgress(quest, portfolio);
     bool isCompleted = quest.isCompleted;
-    bool wasJustCompleted = false;
 
     // Check if quest was just completed
     if (progress >= 1.0 && !isCompleted) {
       quest.isCompleted = true;
-      wasJustCompleted = true;
       print('🎉 Quest completed: ${quest.title}');
       // Show quest completion mascot popup after build
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1687,6 +1766,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  // Dynamic subtext helper methods
+  String _getTopMoverText() {
+    final portfolio = context.read<PortfolioProvider>();
+    if (portfolio.holdings.isEmpty) {
+      return 'Start trading to see movers';
+    }
+
+    // Find the stock with highest gain
+    String topMover = '';
+    double maxGain = double.negativeInfinity;
+
+    for (final entry in portfolio.holdings.entries) {
+      final symbol = entry.key;
+      final shares = entry.value;
+      final currentPrice = portfolio.currentPrices[symbol] ?? 0.0;
+      if (currentPrice > 0 && shares > 0) {
+        // Calculate gain percentage (simplified - using current price vs a base price)
+        final gain =
+            (currentPrice - 100.0) / 100.0 * 100; // Assuming base price of $100
+        if (gain > maxGain) {
+          maxGain = gain;
+          topMover = symbol;
+        }
+      }
+    }
+
+    if (topMover.isNotEmpty) {
+      final gainText = maxGain >= 0
+          ? '+${maxGain.toStringAsFixed(1)}%'
+          : '${maxGain.toStringAsFixed(1)}%';
+      return 'Top mover: $topMover $gainText';
+    }
+
+    return 'No active positions';
+  }
+
+  String _getPortfolioChangeText() {
+    final portfolio = context.read<PortfolioProvider>();
+    final changePercent = portfolio.totalGainLossPercentage;
+    final changeText = changePercent >= 0
+        ? '+${changePercent.toStringAsFixed(1)}%'
+        : '${changePercent.toStringAsFixed(1)}%';
+    final direction = changePercent >= 0 ? '▲' : '▼';
+    return 'Portfolio $changeText $direction';
+  }
+
+  String _getNextLessonText() {
+    // Simple lesson progression based on user level
+    final portfolio = context.read<PortfolioProvider>();
+    final level = portfolio.userLevel;
+
+    if (level <= 2) {
+      return 'Next: What is an ETF?';
+    } else if (level <= 5) {
+      return 'Next: Risk management';
+    } else if (level <= 10) {
+      return 'Next: Technical analysis';
+    } else {
+      return 'Next: Advanced strategies';
+    }
+  }
+
+  String _getLeaderboardRankText() {
+    // Since we only have 1 user, they're always #1
+    return 'Your Rank: #1 🏆';
+  }
+
+  String _getPortfolioSummaryText() {
+    final portfolio = context.read<PortfolioProvider>();
+    final holdingsCount = portfolio.holdings.length;
+    if (holdingsCount == 0) {
+      return 'No holdings yet';
+    } else if (holdingsCount == 1) {
+      return '1 holding';
+    } else {
+      return '$holdingsCount holdings';
+    }
+  }
+
+  String _getAchievementsText() {
+    final portfolio = context.read<PortfolioProvider>();
+    final level = portfolio.userLevel;
+    final xp = portfolio.userXp;
+
+    // Simple achievement count based on level and XP
+    int achievements = 0;
+    if (level >= 2) achievements++;
+    if (level >= 5) achievements++;
+    if (level >= 10) achievements++;
+    if (xp >= 1000) achievements++;
+    if (xp >= 5000) achievements++;
+    if (portfolio.transactionHistory.length >= 10) achievements++;
+
+    if (achievements == 0) {
+      return 'Start earning badges';
+    } else if (achievements == 1) {
+      return '1 badge earned';
+    } else {
+      return '$achievements badges earned';
+    }
   }
 }
 

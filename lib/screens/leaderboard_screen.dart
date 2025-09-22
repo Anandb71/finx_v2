@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../models/leaderboard_entry.dart';
+import '../services/portfolio_provider.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -16,7 +18,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   late AnimationController _particleAnimationController;
   late AnimationController _glowAnimationController;
   late AnimationController _rankAnimationController;
-  
+
   late Animation<double> _headerAnimation;
   late Animation<double> _listAnimation;
   late Animation<double> _particleAnimation;
@@ -26,77 +28,82 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   String _selectedTimeframe = 'All Time';
   String _selectedCategory = 'Portfolio Value';
 
-  final List<String> _timeframes = ['All Time', 'This Month', 'This Week', 'Today'];
-  final List<String> _categories = ['Portfolio Value', 'XP Earned', 'Trades Made', 'Win Rate'];
+  final List<String> _timeframes = [
+    'All Time',
+    'This Month',
+    'This Week',
+    'Today',
+  ];
+  final List<String> _categories = [
+    'Portfolio Value',
+    'XP Earned',
+    'Trades Made',
+    'Win Rate',
+  ];
 
   @override
   void initState() {
     super.initState();
-    
+
     _headerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     _listAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    
+
     _particleAnimationController = AnimationController(
       duration: const Duration(seconds: 8),
       vsync: this,
     );
-    
+
     _glowAnimationController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
     );
-    
+
     _rankAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _headerAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _headerAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _headerAnimationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
-    _listAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _listAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _listAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _listAnimationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
-    _particleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _particleAnimationController,
-      curve: Curves.linear,
-    ));
+    _particleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _particleAnimationController,
+        curve: Curves.linear,
+      ),
+    );
 
-    _glowAnimation = Tween<double>(
-      begin: 0.3,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _glowAnimationController,
-      curve: Curves.easeInOut,
-    ));
+    _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _glowAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
 
-    _rankAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _rankAnimationController,
-      curve: Curves.elasticOut,
-    ));
+    _rankAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _rankAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
 
     _startAnimations();
   }
@@ -208,9 +215,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                 ),
                                 const SizedBox(width: 8),
                                 ShaderMask(
-                                  shaderCallback: (bounds) => const LinearGradient(
-                                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                                  ).createShader(bounds),
+                                  shaderCallback: (bounds) =>
+                                      const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFFD700),
+                                          Color(0xFFFFA500),
+                                        ],
+                                      ).createShader(bounds),
                                   child: Text(
                                     'Leaderboard',
                                     style: GoogleFonts.orbitron(
@@ -232,16 +243,25 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            const Color(0xFFFFD700).withOpacity(_glowAnimation.value),
-                                            const Color(0xFFFFA500).withOpacity(_glowAnimation.value),
+                                            const Color(
+                                              0xFFFFD700,
+                                            ).withOpacity(_glowAnimation.value),
+                                            const Color(
+                                              0xFFFFA500,
+                                            ).withOpacity(_glowAnimation.value),
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(20),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFFFD700).withOpacity(0.3 * _glowAnimation.value),
-                                            blurRadius: 15 * _glowAnimation.value,
-                                            spreadRadius: 2 * _glowAnimation.value,
+                                            color: const Color(0xFFFFD700)
+                                                .withOpacity(
+                                                  0.3 * _glowAnimation.value,
+                                                ),
+                                            blurRadius:
+                                                15 * _glowAnimation.value,
+                                            spreadRadius:
+                                                2 * _glowAnimation.value,
                                           ),
                                         ],
                                       ),
@@ -314,101 +334,97 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   Widget _buildStatsSection() {
     return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _listAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 30 * (1 - _listAnimation.value)),
-            child: Opacity(
-              opacity: _listAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF1A1A2E),
-                      Color(0xFF16213E),
-                    ],
+      child: Consumer<PortfolioProvider>(
+        builder: (context, portfolio, child) {
+          return AnimatedBuilder(
+            animation: _listAnimation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, 30 * (1 - _listAnimation.value)),
+                child: Opacity(
+                  opacity: _listAnimation.value,
+                  child: Container(
+                    margin: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFFFD700).withOpacity(0.3),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFFD700).withOpacity(0.1),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Your Rank',
+                            '#${_getUserRank()}',
+                            Icons.emoji_events,
+                            const Color(0xFFFFD700),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Total Players',
+                            '${_getTotalPlayers()}',
+                            Icons.people,
+                            const Color(0xFF00D4FF),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Your Score',
+                            '\$${_getUserScore(portfolio).toStringAsFixed(0)}',
+                            Icons.trending_up,
+                            const Color(0xFF00FFA3),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFFFFD700).withOpacity(0.3),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFFD700).withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ],
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        'Your Rank',
-                        '#${_getUserRank()}',
-                        Icons.emoji_events,
-                        const Color(0xFFFFD700),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatCard(
-                        'Total Players',
-                        '${_getTotalPlayers()}',
-                        Icons.people,
-                        const Color(0xFF00D4FF),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatCard(
-                        'Your Score',
-                        '\$${_getUserScore().toStringAsFixed(0)}',
-                        Icons.trending_up,
-                        const Color(0xFF00FFA3),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
-          ],
+          colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 24,
-          ),
+          Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
           Text(
             value,
@@ -461,7 +477,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                         scrollDirection: Axis.horizontal,
                         itemCount: _timeframes.length,
                         itemBuilder: (context, index) {
-                          final isSelected = _timeframes[index] == _selectedTimeframe;
+                          final isSelected =
+                              _timeframes[index] == _selectedTimeframe;
                           return GestureDetector(
                             onTap: () {
                               setState(() {
@@ -478,10 +495,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                               decoration: BoxDecoration(
                                 gradient: isSelected
                                     ? const LinearGradient(
-                                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                                        colors: [
+                                          Color(0xFFFFD700),
+                                          Color(0xFFFFA500),
+                                        ],
                                       )
                                     : null,
-                                color: isSelected ? null : Colors.white.withOpacity(0.1),
+                                color: isSelected
+                                    ? null
+                                    : Colors.white.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: isSelected
@@ -492,7 +514,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                 boxShadow: isSelected
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFFFFD700).withOpacity(0.3),
+                                          color: const Color(
+                                            0xFFFFD700,
+                                          ).withOpacity(0.3),
                                           blurRadius: 8,
                                           spreadRadius: 1,
                                         ),
@@ -505,7 +529,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: isSelected ? Colors.white : Colors.white70,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white70,
                                   ),
                                 ),
                               ),
@@ -530,7 +556,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                         scrollDirection: Axis.horizontal,
                         itemCount: _categories.length,
                         itemBuilder: (context, index) {
-                          final isSelected = _categories[index] == _selectedCategory;
+                          final isSelected =
+                              _categories[index] == _selectedCategory;
                           return GestureDetector(
                             onTap: () {
                               setState(() {
@@ -547,10 +574,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                               decoration: BoxDecoration(
                                 gradient: isSelected
                                     ? const LinearGradient(
-                                        colors: [Color(0xFF00D4FF), Color(0xFF00FFA3)],
+                                        colors: [
+                                          Color(0xFF00D4FF),
+                                          Color(0xFF00FFA3),
+                                        ],
                                       )
                                     : null,
-                                color: isSelected ? null : Colors.white.withOpacity(0.1),
+                                color: isSelected
+                                    ? null
+                                    : Colors.white.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: isSelected
@@ -561,7 +593,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                 boxShadow: isSelected
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFF00D4FF).withOpacity(0.3),
+                                          color: const Color(
+                                            0xFF00D4FF,
+                                          ).withOpacity(0.3),
                                           blurRadius: 8,
                                           spreadRadius: 1,
                                         ),
@@ -574,7 +608,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: isSelected ? Colors.white : Colors.white70,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white70,
                                   ),
                                 ),
                               ),
@@ -595,51 +631,52 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   Widget _buildLeaderboardList() {
     return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _listAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 40 * (1 - _listAnimation.value)),
-            child: Opacity(
-              opacity: _listAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF1A1A2E),
-                      Color(0xFF16213E),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFFFFD700).withOpacity(0.2),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFFD700).withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildListHeader(),
-                    ...List.generate(
-                      _getLeaderboardData().length,
-                      (index) => _buildLeaderboardItem(
-                        _getLeaderboardData()[index],
-                        index + 1,
+      child: Consumer<PortfolioProvider>(
+        builder: (context, portfolio, child) {
+          return AnimatedBuilder(
+            animation: _listAnimation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, 40 * (1 - _listAnimation.value)),
+                child: Opacity(
+                  opacity: _listAnimation.value,
+                  child: Container(
+                    margin: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
                       ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFFFD700).withOpacity(0.2),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFFD700).withOpacity(0.1),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
-                  ],
+                    child: Column(
+                      children: [
+                        _buildListHeader(),
+                        ...List.generate(
+                          _getLeaderboardData(portfolio).length,
+                          (index) => _buildLeaderboardItem(
+                            _getLeaderboardData(portfolio)[index],
+                            index + 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),
@@ -717,14 +754,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   Widget _buildLeaderboardItem(LeaderboardEntry entry, int rank) {
     final isTopThree = rank <= 3;
     final isCurrentUser = entry.isCurrentUser;
-    
+
     return AnimatedBuilder(
       animation: _rankAnimation,
       builder: (context, child) {
         return Transform.translate(
           offset: Offset(0, 20 * (1 - _rankAnimation.value)),
           child: Opacity(
-            opacity: _rankAnimation.value,
+            opacity: _rankAnimation.value.clamp(0.0, 1.0),
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -732,10 +769,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     ? const LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
-                        colors: [
-                          Color(0xFF00D4FF),
-                          Color(0xFF00FFA3),
-                        ],
+                        colors: [Color(0xFF00D4FF), Color(0xFF00FFA3)],
                       )
                     : null,
                 color: isCurrentUser ? null : Colors.transparent,
@@ -764,7 +798,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                             shape: BoxShape.circle,
                             gradient: isCurrentUser
                                 ? const LinearGradient(
-                                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                                    colors: [
+                                      Color(0xFFFFD700),
+                                      Color(0xFFFFA500),
+                                    ],
                                   )
                                 : LinearGradient(
                                     colors: [
@@ -801,7 +838,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: isCurrentUser ? Colors.white : Colors.white,
+                                  color: isCurrentUser
+                                      ? Colors.white
+                                      : Colors.white,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -809,7 +848,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                 'Level ${entry.level}',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: isCurrentUser ? Colors.white70 : Colors.white60,
+                                  color: isCurrentUser
+                                      ? Colors.white70
+                                      : Colors.white60,
                                 ),
                               ),
                             ],
@@ -825,7 +866,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                       style: GoogleFonts.orbitron(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: isCurrentUser ? Colors.white : _getRankColor(rank),
+                        color: isCurrentUser
+                            ? Colors.white
+                            : _getRankColor(rank),
                       ),
                     ),
                   ),
@@ -835,8 +878,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Icon(
-                          entry.change >= 0 ? Icons.trending_up : Icons.trending_down,
-                          color: entry.change >= 0 ? const Color(0xFF00FFA3) : const Color(0xFFFF6B6B),
+                          entry.change >= 0
+                              ? Icons.trending_up
+                              : Icons.trending_down,
+                          color: entry.change >= 0
+                              ? const Color(0xFF00FFA3)
+                              : const Color(0xFFFF6B6B),
                           size: 16,
                         ),
                         const SizedBox(width: 4),
@@ -845,7 +892,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: entry.change >= 0 ? const Color(0xFF00FFA3) : const Color(0xFFFF6B6B),
+                            color: entry.change >= 0
+                                ? const Color(0xFF00FFA3)
+                                : const Color(0xFFFF6B6B),
                           ),
                         ),
                       ],
@@ -867,10 +916,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         height: 32,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              _getRankColor(rank),
-              _getRankColor(rank).withOpacity(0.7),
-            ],
+            colors: [_getRankColor(rank), _getRankColor(rank).withOpacity(0.7)],
           ),
           shape: BoxShape.circle,
           boxShadow: [
@@ -882,25 +928,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           ],
         ),
         child: Center(
-          child: Icon(
-            _getRankIcon(rank),
-            color: Colors.white,
-            size: 18,
-          ),
+          child: Icon(_getRankIcon(rank), color: Colors.white, size: 18),
         ),
       );
     }
-    
+
     return Container(
       width: 32,
       height: 32,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
       ),
       child: Center(
         child: Text(
@@ -954,151 +993,39 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     return value.toStringAsFixed(0);
   }
 
-  List<LeaderboardEntry> _getLeaderboardData() {
+  List<LeaderboardEntry> _getLeaderboardData(PortfolioProvider portfolio) {
+    // Get real data from portfolio
+    final totalValue = portfolio.totalPortfolioValue;
+    final gainLossPercent = portfolio.totalGainLossPercentage;
+    final userLevel = portfolio.userLevel;
+
     return [
       LeaderboardEntry(
-        userId: 'alex_chen_001',
-        username: 'Alex Chen',
-        value: 1250000,
-        changePercent: 12.5,
+        userId: 'current_user_001',
+        username: 'You',
+        value: totalValue,
+        changePercent: gainLossPercent,
         rank: 1,
         type: LeaderboardType.portfolioValue,
         lastUpdated: DateTime.now(),
-        name: 'Alex Chen',
-        change: 12.5,
-        level: 15,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'sarah_johnson_002',
-        username: 'Sarah Johnson',
-        value: 1180000,
-        changePercent: 8.3,
-        rank: 2,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'Sarah Johnson',
-        change: 8.3,
-        level: 14,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'mike_rodriguez_003',
-        username: 'Mike Rodriguez',
-        value: 1095000,
-        changePercent: -2.1,
-        rank: 3,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'Mike Rodriguez',
-        change: -2.1,
-        level: 13,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'current_user_004',
-        username: 'You',
-        value: 950000,
-        changePercent: 15.7,
-        rank: 4,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
         name: 'You',
-        change: 15.7,
-        level: 12,
+        change: gainLossPercent,
+        level: userLevel,
         isCurrentUser: true,
-      ),
-      LeaderboardEntry(
-        userId: 'emma_wilson_005',
-        username: 'Emma Wilson',
-        value: 875000,
-        changePercent: 5.2,
-        rank: 5,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'Emma Wilson',
-        change: 5.2,
-        level: 11,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'david_kim_006',
-        username: 'David Kim',
-        value: 820000,
-        changePercent: -1.8,
-        rank: 6,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'David Kim',
-        change: -1.8,
-        level: 10,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'lisa_zhang_007',
-        username: 'Lisa Zhang',
-        value: 780000,
-        changePercent: 7.9,
-        rank: 7,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'Lisa Zhang',
-        change: 7.9,
-        level: 10,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'tom_anderson_008',
-        username: 'Tom Anderson',
-        value: 720000,
-        changePercent: 3.4,
-        rank: 8,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'Tom Anderson',
-        change: 3.4,
-        level: 9,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'maria_garcia_009',
-        username: 'Maria Garcia',
-        value: 680000,
-        changePercent: -0.5,
-        rank: 9,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'Maria Garcia',
-        change: -0.5,
-        level: 9,
-        isCurrentUser: false,
-      ),
-      LeaderboardEntry(
-        userId: 'james_brown_010',
-        username: 'James Brown',
-        value: 640000,
-        changePercent: 11.2,
-        rank: 10,
-        type: LeaderboardType.portfolioValue,
-        lastUpdated: DateTime.now(),
-        name: 'James Brown',
-        change: 11.2,
-        level: 8,
-        isCurrentUser: false,
       ),
     ];
   }
 
   int _getUserRank() {
-    return 4; // User is currently ranked 4th
+    return 1; // User is #1 since they're the only one
   }
 
   int _getTotalPlayers() {
-    return 1247; // Total number of players
+    return 1; // Only you for now
   }
 
-  double _getUserScore() {
-    return 950000; // User's current score
+  double _getUserScore(PortfolioProvider portfolio) {
+    return portfolio.totalPortfolioValue; // User's real portfolio value
   }
 
   Widget _buildBottomPadding() {
