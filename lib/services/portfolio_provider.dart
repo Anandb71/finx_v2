@@ -69,6 +69,7 @@ class PortfolioProvider extends ChangeNotifier {
   // Getters
   double get virtualCash => _virtualCash;
   Map<String, int> get portfolio => Map.from(_portfolio);
+  Map<String, int> get holdings => Map.from(_portfolio);
   Map<String, double> get currentPrices => Map.from(_currentPrices);
   List<Transaction> get transactionHistory => List.from(_transactionHistory);
 
@@ -118,6 +119,8 @@ class PortfolioProvider extends ChangeNotifier {
     });
     return total;
   }
+
+  double get totalValue => totalPortfolioValue;
 
   // Get portfolio value for a specific stock
   double getStockValue(String symbol) {

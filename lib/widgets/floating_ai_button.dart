@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../screens/ai_mentor_screen.dart';
-import '../main.dart';
+import '../services/global_mascot_manager.dart';
 
 class FloatingAIButton extends StatefulWidget {
   const FloatingAIButton({super.key});
@@ -72,7 +72,7 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
     });
 
     // Use the global navigator key to ensure proper navigation
-    MyApp.navigatorKey.currentState?.push(
+    GlobalMascotManager.navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (context) => const AIMentorScreen()),
     );
   }

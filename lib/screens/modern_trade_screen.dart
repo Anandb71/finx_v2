@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/portfolio_provider.dart';
 import '../services/real_time_data_service.dart';
+import '../services/mascot_manager_service.dart';
+import '../services/global_mascot_manager.dart';
 import '../widgets/sparkline_widget.dart';
 import 'dart:math' as math;
 
@@ -192,6 +194,19 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
           // Add XP for first trade
           if (portfolio.transactionHistory.length == 1) {
             portfolio.addXp(250);
+            // Show first trade mascot popup
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              GlobalMascotManager.showMascotPopup(MascotTrigger.firstTrade);
+            });
+          } else {
+            // Show trade success mascot popup
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              GlobalMascotManager.showMascotPopup(
+                _isBuyMode
+                    ? MascotTrigger.tradeSuccess
+                    : MascotTrigger.tradeSellSuccess,
+              );
+            });
           }
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1102,5 +1117,10 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
         ],
       ),
     );
+  }
+
+  void _showMascotPopup(MascotTrigger trigger) {
+    // Use the global mascot popup system
+    GlobalMascotManager.showMascotPopup(trigger);
   }
 }

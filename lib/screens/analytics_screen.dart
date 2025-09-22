@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/portfolio_provider.dart';
+import '../services/mascot_manager_service.dart';
+import '../services/global_mascot_manager.dart';
 import '../widgets/sparkline_widget.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -559,6 +561,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     _headerAnimationController.forward();
     _chartAnimationController.forward();
     _pulseAnimationController.repeat(reverse: true);
+
+    // Show analytics mascot popup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        GlobalMascotManager.showMascotPopup(MascotTrigger.analyticsView);
+      }
+    });
   }
 
   @override
@@ -1727,4 +1736,12 @@ class AdvancedChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+// Add mascot popup method to the main class
+extension AnalyticsScreenMascot on _AnalyticsScreenState {
+  void _showMascotPopup(MascotTrigger trigger) {
+    // Use the global mascot popup system
+    GlobalMascotManager.showMascotPopup(trigger);
+  }
 }

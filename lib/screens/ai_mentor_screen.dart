@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import '../services/gemini_ai_service.dart';
+import '../services/portfolio_provider.dart';
 
 class AIMentorScreen extends StatefulWidget {
   const AIMentorScreen({super.key});
@@ -108,11 +110,26 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     _messageController.clear();
     _scrollToBottom();
 
-    // Get AI response
+    // Get AI response with portfolio context
     try {
       String aiResponse;
       if (_isInitialized) {
-        aiResponse = await GeminiAIService.getFinancialAdvice(text);
+        // Get portfolio data for AI context
+        final portfolio = Provider.of<PortfolioProvider>(
+          context,
+          listen: false,
+        );
+        final portfolioData = {
+          'virtualCash': portfolio.virtualCash,
+          'holdings': portfolio.holdings,
+          'totalValue': portfolio.totalValue,
+        };
+
+        // Use portfolio-aware AI
+        aiResponse = await GeminiAIService.getPortfolioAdvice(
+          text,
+          portfolioData,
+        );
       } else {
         // Fallback to random tip if AI is not initialized
         aiResponse = await GeminiAIService.getRandomTip();

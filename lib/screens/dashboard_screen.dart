@@ -20,6 +20,8 @@ import 'achievements_screen.dart';
 import 'api_test_screen.dart';
 import 'functionality_test_screen.dart';
 import 'settings_screen.dart';
+import '../services/mascot_manager_service.dart';
+import '../services/global_mascot_manager.dart';
 
 // Data models
 class Quest {
@@ -377,6 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       return GestureDetector(
                         onTap: () {
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => const PortfolioScreen(),
@@ -686,6 +689,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 16),
 
+                  // Mascot of the Day
+                  _buildMascotOfTheDay(),
+
+                  const SizedBox(height: 16),
+
                   // Logout Button
                   SizedBox(
                     width: double.infinity,
@@ -828,12 +836,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildMascotOfTheDay() {
+    final mascotOfTheDay = MascotManagerService.getMascotOfTheDay();
+    final dailyTip = MascotManagerService.getDailyTip(mascotOfTheDay);
+
+    return MascotManagerService.buildMascotOfTheDay(
+      mascot: mascotOfTheDay,
+      tip: dailyTip,
+      onTap: () {
+        // Show AI-based portfolio advice instead of generic tip
+        _showPortfolioAdvice();
+      },
+    );
+  }
+
+  void _showPortfolioAdvice() {
+    // Get current portfolio data
+    final portfolio = context.read<PortfolioProvider>();
+    final portfolioData = {
+      'virtualCash': portfolio.virtualCash,
+      'holdings': portfolio.holdings,
+      'totalValue': portfolio.totalValue,
+    };
+
+    // Get AI-based advice
+    final advice = MascotManagerService.getPortfolioAdvice(portfolioData);
+
+    // Show as bottom sheet
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _PortfolioAdviceWidget(advice: advice),
+    );
+  }
+
+  void _showMascotPopup(MascotTrigger trigger) {
+    // Use the global mascot popup system
+    GlobalMascotManager.showMascotPopup(trigger);
+  }
+
   Widget _buildQuestCard(Quest quest, PortfolioProvider portfolio) {
     // Calculate real quest progress based on portfolio data
     double progress = _calculateQuestProgress(quest, portfolio);
     bool isCompleted = quest.isCompleted;
+    bool wasJustCompleted = false;
 
-    // Quest completion logic removed to prevent XP spam
+    // Check if quest was just completed
+    if (progress >= 1.0 && !isCompleted) {
+      quest.isCompleted = true;
+      wasJustCompleted = true;
+      print('🎉 Quest completed: ${quest.title}');
+      // Show quest completion mascot popup after build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        print('🦊 Triggering quest completion mascot popup');
+        GlobalMascotManager.showMascotPopup(MascotTrigger.questComplete);
+      });
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
@@ -1627,6 +1686,224 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PortfolioAdviceWidget extends StatefulWidget {
+  final MascotMessage advice;
+
+  const _PortfolioAdviceWidget({required this.advice});
+
+  @override
+  State<_PortfolioAdviceWidget> createState() => _PortfolioAdviceWidgetState();
+}
+
+class _PortfolioAdviceWidgetState extends State<_PortfolioAdviceWidget>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, 200 * _slideAnimation.value),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: Container(
+              margin: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: widget.advice.backgroundColor,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.advice.backgroundColor.withOpacity(0.4),
+                    blurRadius: 30,
+                    spreadRadius: 8,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      // Mascot Image
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 15,
+                              spreadRadius: 3,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            MascotManagerService.getMascotImage(
+                              widget.advice.mascot,
+                            ),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.pets,
+                                  size: 40,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Title
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${widget.advice.emoji} ${MascotManagerService.getMascotName(widget.advice.mascot)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Portfolio Analysis',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Close button
+                      GestureDetector(
+                        onTap: () {
+                          _animationController.reverse().then((_) {
+                            if (mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 24,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Advice message
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      widget.advice.message,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: Colors.white,
+                        height: 1.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Action button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _animationController.reverse().then((_) {
+                          if (mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: widget.advice.backgroundColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 8,
+                      ),
+                      child: Text(
+                        'Got it!',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

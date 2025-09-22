@@ -14,6 +14,7 @@ import 'services/real_time_data_service.dart';
 import 'services/performance_monitor.dart';
 import 'services/data_cache.dart';
 import 'widgets/app_with_floating_ai.dart';
+import 'services/global_mascot_manager.dart';
 
 // To make GoogleFonts work, add this to your pubspec.yaml file:
 // dependencies:
@@ -63,7 +64,7 @@ class MyApp extends StatelessWidget {
         Provider(create: (context) => DataCache()),
       ],
       child: MaterialApp(
-        navigatorKey: navigatorKey,
+        navigatorKey: GlobalMascotManager.navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.dark,
