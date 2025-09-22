@@ -19,8 +19,13 @@ class LeaderboardEntry {
   final int rank;
   final LeaderboardType type;
   final DateTime lastUpdated;
-  final Map<String, dynamic>?
-  metadata; // Additional data like streak, badges, etc.
+  final Map<String, dynamic>? metadata; // Additional data like streak, badges, etc.
+  
+  // Additional properties for the leaderboard screen
+  final String name;
+  final double change;
+  final int level;
+  final bool isCurrentUser;
 
   const LeaderboardEntry({
     required this.userId,
@@ -32,6 +37,10 @@ class LeaderboardEntry {
     required this.type,
     required this.lastUpdated,
     this.metadata,
+    required this.name,
+    required this.change,
+    required this.level,
+    required this.isCurrentUser,
   });
 
   LeaderboardEntry copyWith({
@@ -44,6 +53,10 @@ class LeaderboardEntry {
     LeaderboardType? type,
     DateTime? lastUpdated,
     Map<String, dynamic>? metadata,
+    String? name,
+    double? change,
+    int? level,
+    bool? isCurrentUser,
   }) {
     return LeaderboardEntry(
       userId: userId ?? this.userId,
@@ -55,6 +68,10 @@ class LeaderboardEntry {
       type: type ?? this.type,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       metadata: metadata ?? this.metadata,
+      name: name ?? this.name,
+      change: change ?? this.change,
+      level: level ?? this.level,
+      isCurrentUser: isCurrentUser ?? this.isCurrentUser,
     );
   }
 
@@ -69,6 +86,10 @@ class LeaderboardEntry {
       'type': type.name,
       'lastUpdated': lastUpdated.toIso8601String(),
       'metadata': metadata,
+      'name': name,
+      'change': change,
+      'level': level,
+      'isCurrentUser': isCurrentUser,
     };
   }
 
@@ -88,6 +109,10 @@ class LeaderboardEntry {
       metadata: json['metadata'] != null
           ? Map<String, dynamic>.from(json['metadata'])
           : null,
+      name: json['name'] ?? json['username'],
+      change: json['change']?.toDouble() ?? json['changePercent']?.toDouble() ?? 0.0,
+      level: json['level'] ?? 1,
+      isCurrentUser: json['isCurrentUser'] ?? false,
     );
   }
 }

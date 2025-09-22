@@ -81,6 +81,8 @@ class PortfolioProvider extends ChangeNotifier {
   // Achievement getters
   List<Achievement> get recentlyUnlockedAchievements =>
       List.from(_recentlyUnlockedAchievements);
+  List<Achievement> get recentAchievements =>
+      _achievementService.getUnlockedAchievements().take(4).toList();
   List<Achievement> get allAchievements =>
       _achievementService.getAllAchievements();
   List<Achievement> get unlockedAchievements =>

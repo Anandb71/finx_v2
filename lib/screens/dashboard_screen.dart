@@ -1,10 +1,13 @@
+import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/user_model.dart';
-import '../services/stock_service.dart';
+// import '../services/stock_service.dart'; // Replaced with real-time API
 import '../services/portfolio_provider.dart';
+import '../services/real_time_data_service.dart';
+import '../models/achievement.dart';
 import '../widgets/modern_stock_card.dart';
 import 'modern_trade_screen.dart';
 import 'portfolio_screen.dart';
@@ -13,14 +16,17 @@ import 'learn_screen.dart';
 import 'leaderboard_screen.dart';
 import 'quests_screen.dart';
 import 'achievements_screen.dart';
-import 'ai_mentor_screen.dart';
+// import 'ai_mentor_screen.dart'; // Available for future use
+import 'api_test_screen.dart';
+import 'functionality_test_screen.dart';
+import 'settings_screen.dart';
 
 // Data models
 class Quest {
   final int id;
   final String title;
   final String icon;
-  final bool isCompleted;
+  bool isCompleted;
   final double progress;
 
   Quest({
@@ -32,13 +38,7 @@ class Quest {
   });
 }
 
-class Achievement {
-  final String name;
-  final String icon;
-  final bool isEarned;
-
-  Achievement({required this.name, required this.icon, required this.isEarned});
-}
+// Achievement class is now imported from ../models/achievement.dart
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -51,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // User data
   UserModel? _userData;
   bool _isLoading = true;
-  final StockService _stockService = StockService();
+  // final StockService _stockService = StockService(); // Replaced with real-time API
 
   // Stock data - now using StreamBuilder, no need for state variables
 
@@ -171,52 +171,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     102500,
   ];
 
-  // Mock quest data
+  // Mock quest data - matching quest completion logic
   final List<Quest> dailyQuests = [
     Quest(
       id: 1,
-      title: "Read an article in the Learn section",
-      icon: "💡",
+      title: "Make your first trade",
+      icon: "💰",
       isCompleted: false,
-      progress: 0.3,
+      progress: 0.0,
     ),
     Quest(
       id: 2,
-      title: "Add a tech stock to your watchlist",
-      icon: "📈",
+      title: "Earn 100 XP",
+      icon: "⭐",
       isCompleted: false,
       progress: 0.0,
     ),
     Quest(
       id: 3,
-      title: "Perform your first trade",
-      icon: "💰",
-      isCompleted: true,
-      progress: 1.0,
+      title: "Complete 3 trades",
+      icon: "📈",
+      isCompleted: false,
+      progress: 0.0,
     ),
     Quest(
       id: 4,
-      title: "Check market movers",
-      icon: "📊",
+      title: "Diversify your portfolio",
+      icon: "🌐",
       isCompleted: false,
-      progress: 0.7,
-    ),
-    Quest(
-      id: 5,
-      title: "Complete 3 trades this week",
-      icon: "🎯",
-      isCompleted: false,
-      progress: 0.6,
+      progress: 0.0,
     ),
   ];
 
-  // Mock achievements
-  final List<Achievement> achievements = [
-    Achievement(name: "First Trade", icon: "🎯", isEarned: true),
-    Achievement(name: "Portfolio Pro", icon: "💼", isEarned: true),
-    Achievement(name: "Tech Investor", icon: "💻", isEarned: false),
-    Achievement(name: "Diversifier", icon: "🌐", isEarned: true),
-  ];
+  // Achievements are now fetched from PortfolioProvider
 
   @override
   Widget build(BuildContext context) {
@@ -247,6 +234,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Finx Dashboard',
+          style: GoogleFonts.orbitron(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+        actions: [
+          // Global Refresh Button
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                // This will trigger a rebuild and refresh all data
+              });
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FFA3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF00FFA3).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.refresh,
+                color: const Color(0xFF00FFA3),
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -351,7 +377,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       return GestureDetector(
                         onTap: () {
-                          Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => const PortfolioScreen(),
@@ -595,6 +620,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDynamicActionCard(
+                                  icon: Icons.api,
+                                  title: 'API Test',
+                                  subtitle: 'Test Finnhub integration',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ApiTestScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildDynamicActionCard(
+                                  icon: Icons.bug_report,
+                                  title: 'Functionality Test',
+                                  subtitle: 'Test all app features',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const FunctionalityTestScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildDynamicActionCard(
+                                  icon: Icons.settings,
+                                  title: 'Settings',
+                                  subtitle: 'Customize your experience',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const SettingsScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       );
                     },
@@ -647,239 +727,237 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildDailyQuestsSection() {
-    final completedQuests = dailyQuests.where((q) => q.isCompleted).length;
-    final totalQuests = dailyQuests.length;
+    return Consumer<PortfolioProvider>(
+      builder: (context, portfolio, child) {
+        final completedQuests = dailyQuests.where((q) => q.isCompleted).length;
+        final totalQuests = dailyQuests.length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.emoji_events,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    Text(
-                      'Daily Quests',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.emoji_events,
                         color: Colors.white,
+                        size: 20,
                       ),
                     ),
-                    Text(
-                      '$completedQuests of $totalQuests completed',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Daily Quests',
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          '$completedQuests of $totalQuests completed',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00FFA3).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF00FFA3).withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const QuestsScreen(),
+                        ),
+                      );
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View All',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF00FFA3),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          color: Color(0xFF00FFA3),
+                          size: 12,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF00FFA3).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF00FFA3).withOpacity(0.3),
-                  width: 1,
+            const SizedBox(height: 16),
+            ...dailyQuests
+                .map((quest) => _buildQuestCard(quest, portfolio))
+                .toList(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildQuestCard(Quest quest, PortfolioProvider portfolio) {
+    // Calculate real quest progress based on portfolio data
+    double progress = _calculateQuestProgress(quest, portfolio);
+    bool isCompleted = quest.isCompleted;
+
+    // Quest completion logic removed to prevent XP spam
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          gradient: isCompleted
+              ? const LinearGradient(
+                  colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.08),
+                    Colors.white.withOpacity(0.03),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isCompleted
+                ? const Color(0xFF00FFA3).withOpacity(0.8)
+                : Colors.white.withOpacity(0.15),
+            width: isCompleted ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isCompleted
+                  ? const Color(0xFF00FFA3).withOpacity(0.4)
+                  : Colors.black.withOpacity(0.1),
+              blurRadius: isCompleted ? 12 : 6,
+              spreadRadius: isCompleted ? 2 : 0,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Quest icon with background
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? Colors.white.withOpacity(0.3)
+                    : const Color(0xFF00FFA3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(5),
+                border: isCompleted
+                    ? Border.all(color: Colors.white.withOpacity(0.5), width: 1)
+                    : null,
               ),
-              child: TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const QuestsScreen(),
+              child: Center(
+                child: Text(quest.icon, style: const TextStyle(fontSize: 12)),
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // Quest content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quest.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isCompleted ? Colors.white : Colors.white,
                     ),
-                  );
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'View All',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF00FFA3),
-                      ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+
+                  if (!isCompleted) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Color(0xFF00FFA3),
+                            ),
+                            minHeight: 2,
+                            borderRadius: BorderRadius.circular(1),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${(progress * 100).toInt()}%',
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.arrow_forward_ios,
-                      color: Color(0xFF00FFA3),
-                      size: 12,
+                  ] else ...[
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.white, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'COMPLETED!',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        ...dailyQuests.map((quest) => _buildQuestCard(quest)).toList(),
-      ],
-    );
-  }
-
-  Widget _buildQuestCard(Quest quest) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: quest.isCompleted
-            ? const LinearGradient(
-                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.08),
-                  Colors.white.withOpacity(0.03),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: quest.isCompleted
-              ? const Color(0xFF00FFA3).withOpacity(0.5)
-              : Colors.white.withOpacity(0.15),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: quest.isCompleted
-                ? const Color(0xFF00FFA3).withOpacity(0.2)
-                : Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            spreadRadius: 0,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Quest icon with background
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: quest.isCompleted
-                  ? Colors.white.withOpacity(0.2)
-                  : const Color(0xFF00FFA3).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(quest.icon, style: const TextStyle(fontSize: 18)),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Quest content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  quest.title,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: quest.isCompleted ? Colors.white : Colors.white,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-
-                if (!quest.isCompleted) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: LinearProgressIndicator(
-                          value: quest.progress,
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFF00FFA3),
-                          ),
-                          minHeight: 4,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${(quest.progress * 100).toInt()}%',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
-                  ),
-                ] else ...[
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Completed!',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // XP reward indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: quest.isCompleted
-                  ? Colors.white.withOpacity(0.2)
-                  : const Color(0xFF00FFA3).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '+${quest.id * 25} XP',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: quest.isCompleted
-                    ? Colors.white
-                    : const Color(0xFF00FFA3),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -901,6 +979,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const Spacer(),
+            // Refresh Button
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  // This will trigger a rebuild and refresh the data
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00FFA3).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF00FFA3).withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  Icons.refresh,
+                  color: const Color(0xFF00FFA3),
+                  size: 18,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -930,135 +1033,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withOpacity(0.05), width: 1),
           ),
-          child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _stockService.getStocksStream(),
-            builder: (context, snapshot) {
-              print(
-                'Market Movers StreamBuilder - ConnectionState: ${snapshot.connectionState}',
-              );
-              print(
-                'Market Movers StreamBuilder - HasError: ${snapshot.hasError}',
-              );
-              print(
-                'Market Movers StreamBuilder - HasData: ${snapshot.hasData}',
-              );
-              if (snapshot.hasData) {
-                print('Market Movers Data: ${snapshot.data?.length} stocks');
-              }
-
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF00FFA3),
-                    ),
-                  ),
-                );
-              }
-
-              if (snapshot.hasError) {
-                print('Market Movers Error: ${snapshot.error}');
-                return Center(
-                  child: Text(
-                    'Error loading stocks: ${snapshot.error}',
-                    style: GoogleFonts.inter(
-                      color: Colors.red.withOpacity(0.7),
-                    ),
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No stock data available',
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                  ),
-                );
-              }
-
-              final stocks = snapshot.data!;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: stocks.take(10).length, // Show first 10 stocks
-                  itemBuilder: (context, index) {
-                    final stockData = stocks[index];
-                    final isDesktop = MediaQuery.of(context).size.width > 768;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: ModernStockCard(
-                        stockData: stockData,
-                        isDesktop: isDesktop,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ModernTradeScreen(stockData: stockData),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
+          child: _buildRealTimeMarketMovers(),
         ),
       ],
     );
   }
 
   Widget _buildAchievementsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<PortfolioProvider>(
+      builder: (context, portfolio, child) {
+        final recentAchievements = portfolio.recentAchievements
+            .take(4)
+            .toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'My Achievements',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AchievementsScreen(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'My Achievements',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                );
-              },
-              child: Text(
-                'View All',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF00FFA3),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AchievementsScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'View All',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF00FFA3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (recentAchievements.isNotEmpty)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: recentAchievements
+                      .map((achievement) => _buildAchievementBadge(achievement))
+                      .toList(),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.emoji_events_outlined,
+                      color: Colors.white.withOpacity(0.5),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Complete trades to earn achievements!',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
           ],
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: achievements
-                .map((achievement) => _buildAchievementBadge(achievement))
-                .toList(),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -1067,21 +1130,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, constraints) {
         // Responsive sizing based on screen size
         final isDesktop = MediaQuery.of(context).size.width > 768;
-        final badgeWidth = isDesktop ? 90.0 : 80.0;
-        final badgeHeight = isDesktop ? 60.0 : 50.0;
+        final badgeWidth = isDesktop ? 110.0 : 95.0;
+        final badgeHeight = isDesktop ? 75.0 : 65.0;
 
         return Container(
           margin: const EdgeInsets.only(right: 12),
           width: badgeWidth,
           height: badgeHeight,
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: achievement.isEarned
+            color: achievement.isUnlocked
                 ? const Color(0xFF00FFA3).withOpacity(0.1)
                 : Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: achievement.isEarned
+              color: achievement.isUnlocked
                   ? const Color(0xFF00FFA3).withOpacity(0.3)
                   : Colors.white.withOpacity(0.1),
               width: 1,
@@ -1091,23 +1154,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                achievement.icon,
-                style: TextStyle(
-                  fontSize: isDesktop ? 20 : 16,
-                  color: achievement.isEarned
-                      ? const Color(0xFF00FFA3)
-                      : Colors.white.withOpacity(0.3),
-                ),
+              Icon(
+                _getAchievementIcon(achievement.title),
+                size: isDesktop ? 24 : 20,
+                color: achievement.isUnlocked
+                    ? const Color(0xFF00FFA3)
+                    : Colors.white.withOpacity(0.3),
               ),
               const SizedBox(height: 4),
               Flexible(
                 child: Text(
-                  achievement.name,
+                  achievement.title,
                   style: GoogleFonts.inter(
-                    fontSize: isDesktop ? 10 : 8,
+                    fontSize: isDesktop ? 12 : 10,
                     fontWeight: FontWeight.w500,
-                    color: achievement.isEarned
+                    color: achievement.isUnlocked
                         ? const Color(0xFF00FFA3)
                         : Colors.white.withOpacity(0.5),
                   ),
@@ -1121,6 +1182,226 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
+  }
+
+  IconData _getAchievementIcon(String achievementName) {
+    switch (achievementName.toLowerCase()) {
+      case 'first trade':
+        return Icons.trending_up;
+      case 'portfolio pro':
+        return Icons.account_balance_wallet;
+      case 'tech investor':
+        return Icons.computer;
+      case 'diversifier':
+        return Icons.public;
+      case 'risk taker':
+        return Icons.warning;
+      case 'conservative':
+        return Icons.shield;
+      case 'day trader':
+        return Icons.schedule;
+      case 'long term investor':
+        return Icons.timeline;
+      default:
+        return Icons.emoji_events;
+    }
+  }
+
+  double _calculateQuestProgress(Quest quest, PortfolioProvider portfolio) {
+    double progress = 0.0;
+
+    switch (quest.title.toLowerCase()) {
+      case 'make your first trade':
+        progress = portfolio.totalTrades > 0 ? 1.0 : 0.0;
+        break;
+      case 'earn 100 xp':
+        progress = (portfolio.userXp / 100).clamp(0.0, 1.0);
+        break;
+      case 'complete 3 trades':
+        progress = (portfolio.totalTrades / 3).clamp(0.0, 1.0);
+        break;
+      case 'reach level 2':
+        progress = portfolio.userLevel >= 2
+            ? 1.0
+            : (portfolio.userXp / 1000).clamp(0.0, 1.0);
+        break;
+      case 'diversify your portfolio':
+        progress = (portfolio.portfolio.length / 3).clamp(0.0, 1.0);
+        break;
+      case 'earn 500 xp':
+        progress = (portfolio.userXp / 500).clamp(0.0, 1.0);
+        break;
+      case 'complete 5 trades':
+        progress = (portfolio.totalTrades / 5).clamp(0.0, 1.0);
+        break;
+      case 'reach level 3':
+        progress = portfolio.userLevel >= 3
+            ? 1.0
+            : ((portfolio.userXp - 1000) / 2000).clamp(0.0, 1.0);
+        break;
+      default:
+        progress = 0.0;
+    }
+
+    print(
+      '🔍 Quest Progress: "${quest.title}" = ${(progress * 100).toInt()}% (trades: ${portfolio.totalTrades}, xp: ${portfolio.userXp}, level: ${portfolio.userLevel})',
+    );
+
+    return progress;
+  }
+
+  // Real-time Market Movers using Finnhub API
+  Widget _buildRealTimeMarketMovers() {
+    final realTimeService = RealTimeDataService();
+    final watchlistSymbols = [
+      'AAPL',
+      'GOOGL',
+      'MSFT',
+      'TSLA',
+      'AMZN',
+      'NVDA',
+      'META',
+      'NFLX',
+      'AMD',
+      'INTC',
+    ];
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchMultipleStocks(realTimeService, watchlistSymbols),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFA3)),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: Colors.red.withOpacity(0.7),
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading live data',
+                  style: GoogleFonts.inter(
+                    color: Colors.red.withOpacity(0.7),
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Using cached data...',
+                  style: GoogleFonts.inter(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Text(
+              'No live data available',
+              style: GoogleFonts.inter(color: Colors.white.withOpacity(0.7)),
+            ),
+          );
+        }
+
+        final stocks = snapshot.data!;
+        final isDesktop = MediaQuery.of(context).size.width > 768;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: stocks.length,
+            itemBuilder: (context, index) {
+              final stockData = stocks[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: ModernStockCard(
+                  stockData: stockData,
+                  isDesktop: isDesktop,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ModernTradeScreen(stockData: stockData),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // Fetch multiple stocks from API
+  Future<List<Map<String, dynamic>>> _fetchMultipleStocks(
+    RealTimeDataService service,
+    List<String> symbols,
+  ) async {
+    final List<Map<String, dynamic>> stocks = [];
+
+    for (final symbol in symbols) {
+      try {
+        final stockData = await service.getStockData(symbol);
+        if (stockData != null) {
+          stocks.add({
+            'symbol': stockData.symbol,
+            'name': stockData.name,
+            'currentPrice': stockData.currentPrice,
+            'change': stockData.change,
+            'changePercent': stockData.changePercent,
+            'volume': stockData.volume,
+            'high': stockData.high,
+            'low': stockData.low,
+            'open': stockData.open,
+            'priceHistory': _generatePriceHistory(stockData.currentPrice),
+          });
+        }
+      } catch (e) {
+        print('Error fetching $symbol: $e');
+      }
+    }
+
+    // Sort by change percentage (biggest movers first)
+    stocks.sort(
+      (a, b) => (b['changePercent'] as double).compareTo(
+        a['changePercent'] as double,
+      ),
+    );
+
+    return stocks;
+  }
+
+  // Generate mock price history for sparkline
+  List<double> _generatePriceHistory(double currentPrice) {
+    final random = Random();
+    final history = <double>[];
+    double price = currentPrice;
+
+    for (int i = 0; i < 20; i++) {
+      price +=
+          (random.nextDouble() - 0.5) * currentPrice * 0.02; // ±1% variation
+      history.add(price);
+    }
+
+    return history;
   }
 
   Widget _buildDynamicActionCard({
@@ -1341,53 +1622,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   borderRadius: BorderRadius.circular(4),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Demo XP button (for testing)
-          GestureDetector(
-            onTap: () {
-              portfolio.addXp(100);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '+100 XP! Keep learning!',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                  ),
-                  backgroundColor: const Color(0xFF00FFA3),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  margin: const EdgeInsets.all(10),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00FFA3).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF00FFA3).withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, color: const Color(0xFF00FFA3), size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Complete Quest (+100 XP)',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00FFA3),
-                    ),
-                  ),
-                ],
               ),
             ),
           ),

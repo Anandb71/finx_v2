@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/portfolio_provider.dart';
+import '../services/real_time_data_service.dart';
 import 'modern_trade_screen.dart';
 import 'dart:math' as math;
 

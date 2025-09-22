@@ -45,6 +45,15 @@ dependencies:
   
   # State Management
   provider: ^6.1.2
+  
+  # HTTP requests for API calls
+  http: ^1.1.0
+  
+  # WebSocket for real-time data
+  web_socket_channel: ^2.4.0
+  
+  # Google AI SDK for Gemini integration
+  google_generative_ai: ^0.4.0
 
 dev_dependencies:
   flutter_test:

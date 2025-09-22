@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/portfolio_provider.dart';
+import '../services/real_time_data_service.dart';
 import '../widgets/sparkline_widget.dart';
 import 'dart:math' as math;
 
@@ -21,6 +22,11 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
   bool _isTrading = false;
   String? _errorMessage;
 
+  // Real-time data
+  final RealTimeDataService _realTimeService = RealTimeDataService();
+  double? _livePrice;
+  bool _isLoadingLiveData = false;
+
   late AnimationController _slideController;
   late AnimationController _fadeController;
   late AnimationController _pulseController;
@@ -36,6 +42,33 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
     super.initState();
     _setupAnimations();
     _quantityController.addListener(_onQuantityChanged);
+    _fetchLiveData();
+  }
+
+  // Fetch live data from API
+  Future<void> _fetchLiveData() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingLiveData = true;
+    });
+
+    try {
+      final liveData = await _realTimeService.getStockData(_currentSymbol);
+      if (liveData != null && mounted) {
+        setState(() {
+          _livePrice = liveData.currentPrice;
+          _isLoadingLiveData = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching live data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingLiveData = false;
+        });
+      }
+    }
   }
 
   void _setupAnimations() {
@@ -101,7 +134,8 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
 
   double get _currentPrice {
     if (!mounted) return 0.0;
-    return (widget.stockData['currentPrice'] ?? 0.0).toDouble();
+    // Use live price from API if available, otherwise fallback to stock data
+    return _livePrice ?? (widget.stockData['currentPrice'] ?? 0.0).toDouble();
   }
 
   int get _currentHolding {
@@ -206,6 +240,47 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Trade ${_currentSymbol}',
+          style: GoogleFonts.orbitron(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        actions: [
+          // Refresh Button for Live Data
+          GestureDetector(
+            onTap: _fetchLiveData,
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FFA3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF00FFA3).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                _isLoadingLiveData ? Icons.refresh : Icons.refresh,
+                color: _isLoadingLiveData
+                    ? Colors.white.withOpacity(0.3)
+                    : const Color(0xFF00FFA3),
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -388,6 +463,9 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
                   'Current Price',
                   '\$${_currentPrice.toStringAsFixed(2)}',
                   const Color(0xFF00FFA3),
+                  isLive: _livePrice != null,
+                  isLoading: _isLoadingLiveData,
+                  onRefresh: _fetchLiveData,
                 ),
               ),
               const SizedBox(width: 16),
@@ -407,7 +485,14 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
     );
   }
 
-  Widget _buildPriceCard(String title, String value, Color color) {
+  Widget _buildPriceCard(
+    String title,
+    String value,
+    Color color, {
+    bool isLive = false,
+    bool isLoading = false,
+    VoidCallback? onRefresh,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -418,12 +503,53 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
-            ),
+          Row(
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.7),
+                ),
+              ),
+              if (isLive) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00FFA3).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF00FFA3).withOpacity(0.5),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    'LIVE',
+                    style: GoogleFonts.inter(
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF00FFA3),
+                    ),
+                  ),
+                ),
+              ],
+              const Spacer(),
+              if (onRefresh != null)
+                GestureDetector(
+                  onTap: isLoading ? null : onRefresh,
+                  child: Icon(
+                    isLoading ? Icons.refresh : Icons.refresh,
+                    size: 16,
+                    color: isLoading
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.white.withOpacity(0.7),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(

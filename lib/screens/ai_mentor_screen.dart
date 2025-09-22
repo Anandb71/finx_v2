@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
+import '../services/gemini_ai_service.dart';
 
 class AIMentorScreen extends StatefulWidget {
   const AIMentorScreen({super.key});
@@ -18,28 +19,26 @@ class _AIMentorScreenState extends State<AIMentorScreen>
   late AnimationController _typingController;
   late Animation<double> _typingAnimation;
 
-  // Pre-written responses from the AI mentor
-  final List<String> _mentorResponses = [
-    "Diversification is key! Don't put all your virtual money into one stock. Spreading it across different sectors can reduce risk.",
-    "A 'bull market' is when stock prices are generally rising, while a 'bear market' is when they are falling. It's important to know the difference!",
-    "Remember, this is a simulation. The best way to learn is to try different strategies and see what happens. Don't be afraid to experiment!",
-    "ETFs (Exchange-Traded Funds) are like baskets of stocks that track an index. They're great for beginners because they offer instant diversification.",
-    "Dollar-cost averaging means investing a fixed amount regularly, regardless of market conditions. It can help reduce the impact of market volatility.",
-    "Always do your research before investing! Look at a company's financial health, growth prospects, and industry trends.",
-    "Risk and return go hand in hand. Generally, higher potential returns come with higher risk. Find your comfort zone!",
-    "Don't try to time the market perfectly. Even professional investors struggle with this. Focus on long-term strategies instead.",
-    "Keep an eye on fees! High fees can eat into your returns over time. Look for low-cost investment options when possible.",
-    "Patience is a virtue in investing. The best investors think long-term and don't panic during market downturns.",
-    "Start with companies you understand and use in your daily life. This can make investing more relatable and easier to research.",
-    "Never invest money you can't afford to lose. Always have an emergency fund before you start investing.",
-  ];
+  // Initialize Gemini AI service
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     print('AI Mentor Screen initialized!');
     _setupAnimations();
-    _addWelcomeMessage();
+    _initializeAI();
+  }
+
+  void _initializeAI() async {
+    try {
+      GeminiAIService.initialize();
+      _isInitialized = true;
+      _addWelcomeMessage();
+    } catch (e) {
+      print('Error initializing AI: $e');
+      _addWelcomeMessage(); // Add welcome message even if AI fails to initialize
+    }
   }
 
   void _setupAnimations() {
@@ -52,15 +51,38 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     );
   }
 
-  void _addWelcomeMessage() {
-    _messages.add(
-      ChatMessage(
-        text:
-            "Hello! I'm your AI Mentor. Ask me anything about investing, like 'What is an ETF?' or 'How do I buy a stock?' I'm here to help you learn!",
-        isUser: false,
-        timestamp: DateTime.now(),
-      ),
-    );
+  void _addWelcomeMessage() async {
+    if (_isInitialized) {
+      try {
+        final welcomeMessage = await GeminiAIService.getWelcomeMessage();
+        _messages.add(
+          ChatMessage(
+            text: welcomeMessage,
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+      } catch (e) {
+        print('Error getting welcome message: $e');
+        _messages.add(
+          ChatMessage(
+            text:
+                "Hello! I'm your AI Mentor. Ask me anything about investing, like 'What is an ETF?' or 'How do I buy a stock?' I'm here to help you learn!",
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+    } else {
+      _messages.add(
+        ChatMessage(
+          text:
+              "Hello! I'm your AI Mentor. Ask me anything about investing, like 'What is an ETF?' or 'How do I buy a stock?' I'm here to help you learn!",
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+    }
   }
 
   @override
@@ -71,7 +93,7 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     super.dispose();
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
@@ -86,22 +108,40 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     _messageController.clear();
     _scrollToBottom();
 
-    // Simulate AI thinking and response
-    Future.delayed(const Duration(seconds: 2), () {
-      _addAIResponse();
-    });
-  }
+    // Get AI response
+    try {
+      String aiResponse;
+      if (_isInitialized) {
+        aiResponse = await GeminiAIService.getFinancialAdvice(text);
+      } else {
+        // Fallback to random tip if AI is not initialized
+        aiResponse = await GeminiAIService.getRandomTip();
+      }
 
-  void _addAIResponse() {
-    final random = math.Random();
-    final response = _mentorResponses[random.nextInt(_mentorResponses.length)];
-
-    setState(() {
-      _messages.add(
-        ChatMessage(text: response, isUser: false, timestamp: DateTime.now()),
-      );
-      _isTyping = false;
-    });
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text: aiResponse,
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+        _isTyping = false;
+      });
+    } catch (e) {
+      print('Error getting AI response: $e');
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text:
+                "I'm having trouble connecting right now. Please try again in a moment!",
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+        _isTyping = false;
+      });
+    }
 
     _scrollToBottom();
   }

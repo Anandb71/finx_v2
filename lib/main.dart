@@ -7,7 +7,12 @@ import 'firebase_options.dart';
 import 'auth/auth_gate.dart';
 import 'screens/signup_screen.dart';
 import 'screens/login_screen.dart';
+// import 'screens/optimized_dashboard_screen.dart'; // Available for future use
 import 'services/portfolio_provider.dart';
+import 'services/enhanced_portfolio_provider.dart';
+import 'services/real_time_data_service.dart';
+import 'services/performance_monitor.dart';
+import 'services/data_cache.dart';
 import 'widgets/app_with_floating_ai.dart';
 
 // To make GoogleFonts work, add this to your pubspec.yaml file:
@@ -17,6 +22,11 @@ import 'widgets/app_with_floating_ai.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize services
+  await DataCache().clearExpiredCache();
+  PerformanceMonitor().logMemoryUsage('App Start');
+
   runApp(const MyApp());
 }
 
@@ -29,10 +39,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => PortfolioProvider()
-        ..initializeMockHistory()
-        ..initializeChallenges(),
+    return MultiProvider(
+      providers: [
+        // Original portfolio provider for backward compatibility
+        ChangeNotifierProvider(
+          create: (context) => PortfolioProvider()
+            ..initializeMockHistory()
+            ..initializeChallenges(),
+        ),
+
+        // Enhanced portfolio provider with real-time data
+        ChangeNotifierProvider(
+          create: (context) => EnhancedPortfolioProvider(),
+        ),
+
+        // Real-time data service
+        Provider(create: (context) => RealTimeDataService()),
+
+        // Performance monitor
+        Provider(create: (context) => PerformanceMonitor()),
+
+        // Data cache
+        Provider(create: (context) => DataCache()),
+      ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
