@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../services/portfolio_provider.dart';
 import '../services/mascot_manager_service.dart';
 import '../services/global_mascot_manager.dart';
-import '../widgets/sparkline_widget.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -15,1467 +14,499 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen>
     with TickerProviderStateMixin {
-  late AnimationController _headerAnimationController;
-  late AnimationController _chartAnimationController;
-  late AnimationController _pulseAnimationController;
-  late Animation<double> _headerAnimation;
-  late Animation<double> _chartAnimation;
-  late Animation<double> _pulseAnimation;
-
-  String _selectedTimeframe = '1M';
   String _selectedMetric = 'Portfolio Value';
+  late AnimationController _animationController;
 
-  final List<String> _timeframes = ['1D', '1W', '1M', '3M', '1Y', 'ALL'];
   final List<String> _metrics = [
     'Portfolio Value',
     'P&L',
-    'Volume',
-    'Trades',
-    'Win Rate',
-    'Sharpe Ratio',
+    'Holdings Breakdown',
+    'Trading Activity',
+    'Performance',
   ];
-
-  // Dynamic data based on selections
-  Map<String, List<double>> _getChartDataForMetric(String metric) {
-    switch (metric) {
-      case 'Portfolio Value':
-        return {
-          'portfolio': [
-            100000,
-            101200,
-            102500,
-            101800,
-            103200,
-            104500,
-            103800,
-            105200,
-            106800,
-            108200,
-            107500,
-            109000,
-            110200,
-            111500,
-            112800,
-            111200,
-            113500,
-            114800,
-            116200,
-            115500,
-            117200,
-            118500,
-            119800,
-            121200,
-            122500,
-            121800,
-            123200,
-            124500,
-            125800,
-            127200,
-          ],
-          'sp500': [
-            95000,
-            95200,
-            95500,
-            95800,
-            96200,
-            96500,
-            96800,
-            97200,
-            97800,
-            98200,
-            98500,
-            99000,
-            99200,
-            99500,
-            99800,
-            100200,
-            100500,
-            100800,
-            101200,
-            101500,
-            101800,
-            102200,
-            102500,
-            102800,
-            103200,
-            103500,
-            103800,
-            104200,
-            104500,
-            104800,
-          ],
-        };
-      case 'P&L':
-        return {
-          'portfolio': [
-            0,
-            1200,
-            2500,
-            1800,
-            3200,
-            4500,
-            3800,
-            5200,
-            6800,
-            8200,
-            7500,
-            9000,
-            10200,
-            11500,
-            12800,
-            11200,
-            13500,
-            14800,
-            16200,
-            15500,
-            17200,
-            18500,
-            19800,
-            21200,
-            22500,
-            21800,
-            23200,
-            24500,
-            25800,
-            27200,
-          ],
-          'sp500': [
-            0,
-            200,
-            500,
-            800,
-            1200,
-            1500,
-            1800,
-            2200,
-            2800,
-            3200,
-            3500,
-            4000,
-            4200,
-            4500,
-            4800,
-            5200,
-            5500,
-            5800,
-            6200,
-            6500,
-            6800,
-            7200,
-            7500,
-            7800,
-            8200,
-            8500,
-            8800,
-            9200,
-            9500,
-            9800,
-          ],
-        };
-      case 'Volume':
-        return {
-          'portfolio': [
-            1000,
-            1200,
-            1500,
-            1800,
-            2000,
-            2200,
-            2500,
-            2800,
-            3000,
-            3200,
-            3500,
-            3800,
-            4000,
-            4200,
-            4500,
-            4800,
-            5000,
-            5200,
-            5500,
-            5800,
-            6000,
-            6200,
-            6500,
-            6800,
-            7000,
-            7200,
-            7500,
-            7800,
-            8000,
-            8200,
-          ],
-          'sp500': [
-            800,
-            900,
-            1000,
-            1100,
-            1200,
-            1300,
-            1400,
-            1500,
-            1600,
-            1700,
-            1800,
-            1900,
-            2000,
-            2100,
-            2200,
-            2300,
-            2400,
-            2500,
-            2600,
-            2700,
-            2800,
-            2900,
-            3000,
-            3100,
-            3200,
-            3300,
-            3400,
-            3500,
-            3600,
-            3700,
-          ],
-        };
-      case 'Trades':
-        return {
-          'portfolio': [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-            26,
-            27,
-            28,
-            29,
-          ],
-          'sp500': [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-          ],
-        };
-      case 'Win Rate':
-        return {
-          'portfolio': [
-            0,
-            100,
-            100,
-            75,
-            80,
-            83,
-            85,
-            87,
-            88,
-            89,
-            90,
-            91,
-            92,
-            93,
-            94,
-            95,
-            96,
-            97,
-            98,
-            99,
-            100,
-            100,
-            100,
-            100,
-            100,
-            100,
-            100,
-            100,
-            100,
-            100,
-          ],
-          'sp500': [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-          ],
-        };
-      case 'Sharpe Ratio':
-        return {
-          'portfolio': [
-            0,
-            0.5,
-            1.0,
-            1.2,
-            1.4,
-            1.6,
-            1.8,
-            2.0,
-            2.1,
-            2.2,
-            2.3,
-            2.4,
-            2.5,
-            2.6,
-            2.7,
-            2.8,
-            2.9,
-            3.0,
-            3.1,
-            3.2,
-            3.3,
-            3.4,
-            3.5,
-            3.6,
-            3.7,
-            3.8,
-            3.9,
-            4.0,
-            4.1,
-            4.2,
-          ],
-          'sp500': [
-            0,
-            0.3,
-            0.6,
-            0.8,
-            1.0,
-            1.2,
-            1.4,
-            1.6,
-            1.8,
-            2.0,
-            2.1,
-            2.2,
-            2.3,
-            2.4,
-            2.5,
-            2.6,
-            2.7,
-            2.8,
-            2.9,
-            3.0,
-            3.1,
-            3.2,
-            3.3,
-            3.4,
-            3.5,
-            3.6,
-            3.7,
-            3.8,
-            3.9,
-            4.0,
-          ],
-        };
-      default:
-        return {
-          'portfolio': [
-            100000,
-            101200,
-            102500,
-            101800,
-            103200,
-            104500,
-            103800,
-            105200,
-            106800,
-            108200,
-            107500,
-            109000,
-            110200,
-            111500,
-            112800,
-            111200,
-            113500,
-            114800,
-            116200,
-            115500,
-            117200,
-            118500,
-            119800,
-            121200,
-            122500,
-            121800,
-            123200,
-            124500,
-            125800,
-            127200,
-          ],
-          'sp500': [
-            95000,
-            95200,
-            95500,
-            95800,
-            96200,
-            96500,
-            96800,
-            97200,
-            97800,
-            98200,
-            98500,
-            99000,
-            99200,
-            99500,
-            99800,
-            100200,
-            100500,
-            100800,
-            101200,
-            101500,
-            101800,
-            102200,
-            102500,
-            102800,
-            103200,
-            103500,
-            103800,
-            104200,
-            104500,
-            104800,
-          ],
-        };
-    }
-  }
-
-  Map<String, dynamic> _getMetricData(String metric) {
-    switch (metric) {
-      case 'Portfolio Value':
-        return {'value': '\$104,250', 'change': '+4.25%', 'isPositive': true};
-      case 'P&L':
-        return {'value': '+\$2,150', 'change': '+2.11%', 'isPositive': true};
-      case 'Volume':
-        return {'value': '8,200', 'change': '+15.2%', 'isPositive': true};
-      case 'Trades':
-        return {'value': '29', 'change': '+3.2%', 'isPositive': true};
-      case 'Win Rate':
-        return {'value': '100%', 'change': '+5.0%', 'isPositive': true};
-      case 'Sharpe Ratio':
-        return {'value': '4.2', 'change': '+0.3', 'isPositive': true};
-      default:
-        return {'value': '\$104,250', 'change': '+4.25%', 'isPositive': true};
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    _headerAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _chartAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    );
-    _pulseAnimationController = AnimationController(
+    _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    _headerAnimation = CurvedAnimation(
-      parent: _headerAnimationController,
-      curve: Curves.easeOutCubic,
-    );
-    _chartAnimation = CurvedAnimation(
-      parent: _chartAnimationController,
-      curve: Curves.easeOutCubic,
-    );
-    _pulseAnimation = CurvedAnimation(
-      parent: _pulseAnimationController,
-      curve: Curves.easeInOut,
-    );
+    _animationController.forward();
 
-    _headerAnimationController.forward();
-    _chartAnimationController.forward();
-    _pulseAnimationController.repeat(reverse: true);
-
-    // Show analytics mascot popup
+    // Show mascot popup with context
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        GlobalMascotManager.showMascotPopup(MascotTrigger.analyticsView);
-      }
+      GlobalMascotManager.showMascotPopup(
+        MascotTrigger.analyticsView,
+        context: {
+          'screen': 'Analytics Dashboard',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
     });
   }
 
   @override
   void dispose() {
-    _headerAnimationController.dispose();
-    _chartAnimationController.dispose();
-    _pulseAnimationController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0A0A0A), Color(0xFF1A1A1A), Color(0xFF0F0F0F)],
-          ),
-        ),
-        child: SafeArea(
-          child: CustomScrollView(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Consumer<PortfolioProvider>(
+        builder: (context, portfolio, child) {
+          return CustomScrollView(
             slivers: [
-              _buildSliverAppBar(),
-              _buildTimeframeSelector(),
-              _buildMetricsGrid(),
-              _buildMainChart(),
-              _buildPerformanceMetrics(),
-              _buildSectorAnalysis(),
-              _buildRiskMetrics(),
-              _buildTradingInsights(),
-              _buildMarketComparison(),
-              _buildBottomPadding(),
+              _buildAppBar(),
+              _buildOverviewCards(portfolio),
+              _buildMetricSelector(),
+              _buildChartSection(portfolio),
+              _buildInsightsSection(portfolio),
+              _buildHoldingsBreakdown(portfolio),
+              _buildTradingStats(portfolio),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 50,
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: AnimatedBuilder(
-        animation: _headerAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 3 * (1 - _headerAnimation.value)),
-            child: Opacity(
-              opacity: _headerAnimation.value,
-              child: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF1A1A2E),
-                        Color(0xFF16213E),
-                        Color(0xFF0F3460),
-                      ],
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Animated background particles
-                      ...List.generate(
-                        4,
-                        (index) => _buildFloatingParticle(index),
-                      ),
-
-                      // Main content
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Title with glow effect
-                            ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                              ).createShader(bounds),
-                              child: Text(
-                                'Analytics Dashboard',
-                                style: GoogleFonts.orbitron(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 1),
-
-                            // Subtitle
-                            Text(
-                              'Advanced insights & performance metrics',
-                              style: GoogleFonts.inter(
-                                fontSize: 9,
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildFloatingParticle(int index) {
-    final random = (index * 1.3) % 1.0;
-    final size = 2.0 + (random * 4.0);
-    final left = 20.0 + (random * 300.0);
-    final top = 60.0 + (random * 200.0);
-    final delay = Duration(milliseconds: (index * 200).toInt());
-
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Positioned(
-          left: left,
-          top: top + (10 * _pulseAnimation.value * (index % 2 == 0 ? 1 : -1)),
-          child: Opacity(
-            opacity: 0.3 + (0.4 * _pulseAnimation.value),
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00FFA3),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00FFA3).withOpacity(0.5),
-                    blurRadius: 4,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
+  Widget _buildAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).scaffoldBackgroundColor,
+                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.6),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTimeframeSelector() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        ),
-        child: Row(
-          children: _timeframes.map((timeframe) {
-            final isSelected = _selectedTimeframe == timeframe;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedTimeframe = timeframe),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? const LinearGradient(
-                            colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                          )
-                        : null,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF00FFA3).withOpacity(0.3),
-                              blurRadius: 8,
-                              spreadRadius: 0,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Text(
-                    timeframe,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.black : Colors.white70,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricsGrid() {
-    final portfolioData = _getMetricData('Portfolio Value');
-    final pnlData = _getMetricData('P&L');
-
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                'Total Value',
-                portfolioData['value'],
-                portfolioData['change'],
-                Icons.trending_up,
-                const Color(0xFF00FFA3),
-                portfolioData['isPositive'],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildMetricCard(
-                'Today\'s P&L',
-                pnlData['value'],
-                pnlData['change'],
-                Icons.arrow_upward,
-                const Color(0xFF00D4FF),
-                pnlData['isPositive'],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(
-    String title,
-    String value,
-    String change,
-    IconData icon,
-    Color color,
-    bool isPositive,
-  ) {
-    return AnimatedBuilder(
-      animation: _headerAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: 0.8 + (0.2 * _headerAnimation.value),
-          child: Opacity(
-            opacity: _headerAnimation.value,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.08),
-                    Colors.white.withOpacity(0.03),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: color.withOpacity(0.3), width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.1),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(icon, color: color, size: 20),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isPositive
-                              ? const Color(0xFF00FFA3).withOpacity(0.2)
-                              : const Color(0xFFFF6B6B).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          change,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isPositive
-                                ? const Color(0xFF00FFA3)
-                                : const Color(0xFFFF6B6B),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMainChart() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.08),
-              Colors.white.withOpacity(0.03),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const SizedBox(height: 40),
                 Text(
-                  'Portfolio Performance',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
+                  'Portfolio Analytics',
+                  style: GoogleFonts.orbitron(
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
-                const Spacer(),
-                _buildMetricSelector(),
+                const SizedBox(height: 8),
+                Text(
+                  'Real-time insights & performance',
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.white70),
+                ),
               ],
             ),
-            const SizedBox(height: 24),
-            AnimatedBuilder(
-              animation: _chartAnimation,
-              builder: (context, child) {
-                final chartData = _getChartDataForMetric(_selectedMetric);
-                return Container(
-                  height: 200,
-                  child: CustomPaint(
-                    painter: AdvancedChartPainter(
-                      portfolioData: chartData['portfolio']!,
-                      sp500Data: chartData['sp500']!,
-                      animationValue: _chartAnimation.value,
-                    ),
-                    size: Size.infinite,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverviewCards(PortfolioProvider portfolio) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildOverviewCard(
+                    'Total Value',
+                    '\$${portfolio.totalPortfolioValue.toStringAsFixed(0)}',
+                    portfolio.totalGainLossPercentage >= 0
+                        ? Colors.green
+                        : Colors.red,
+                    portfolio.totalGainLossPercentage >= 0 ? '+' : '',
+                    '${portfolio.totalGainLossPercentage.toStringAsFixed(2)}%',
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildOverviewCard(
+                    'Cash Available',
+                    '\$${portfolio.virtualCash.toStringAsFixed(0)}',
+                    Colors.blue,
+                    '',
+                    '${((portfolio.virtualCash / portfolio.totalPortfolioValue) * 100).toStringAsFixed(1)}%',
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
-            _buildChartLegend(),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildOverviewCard(
+                    'Total Trades',
+                    '${portfolio.totalTrades}',
+                    Colors.orange,
+                    '',
+                    '${portfolio.holdings.length} holdings',
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildOverviewCard(
+                    'Best Performer',
+                    _getBestPerformer(portfolio),
+                    Colors.green,
+                    '',
+                    _getBestPerformerChange(portfolio),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOverviewCard(
+    String title,
+    String value,
+    Color color,
+    String prefix,
+    String subtitle,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white70,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$prefix$value',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: GoogleFonts.inter(fontSize: 11, color: Colors.white60),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildMetricSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedMetric,
-          isDense: true,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-          dropdownColor: const Color(0xFF1A1A1A),
-          items: _metrics.map((String metric) {
-            return DropdownMenuItem<String>(value: metric, child: Text(metric));
-          }).toList(),
-          onChanged: (String? newValue) {
-            if (newValue != null) {
-              setState(() => _selectedMetric = newValue);
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChartLegend() {
-    return Row(
-      children: [
-        _buildLegendItem('Portfolio Value', const Color(0xFF00FFA3)),
-        const SizedBox(width: 24),
-        _buildLegendItem('S&P 500', const Color(0xFF00D4FF)),
-        const SizedBox(width: 24),
-        _buildLegendItem('Benchmark', Colors.white70),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(String label, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          height: 50,
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            itemCount: _metrics.length,
+            itemBuilder: (context, index) {
+              final metric = _metrics[index];
+              final isSelected = _selectedMetric == metric;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedMetric = metric;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF00FFA3)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(
+                      child: Text(
+                        metric,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Colors.black : Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: Colors.white70,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildPerformanceMetrics() {
+  Widget _buildChartSection(PortfolioProvider portfolio) {
     return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Performance Metrics',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _buildPerformanceCard(
-                    'Sharpe Ratio',
-                    '1.85',
-                    'Excellent',
-                    Icons.speed,
-                    const Color(0xFF00FFA3),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildPerformanceCard(
-                    'Max Drawdown',
-                    '-8.2%',
-                    'Low Risk',
-                    Icons.trending_down,
-                    const Color(0xFFFF6B6B),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPerformanceCard(
-                    'Win Rate',
-                    '68.5%',
-                    'Good',
-                    Icons.emoji_events,
-                    const Color(0xFF00D4FF),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildPerformanceCard(
-                    'Avg Return',
-                    '2.1%',
-                    'Daily',
-                    Icons.trending_up,
-                    const Color(0xFF9C27B0),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPerformanceCard(
-    String title,
-    String value,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.05),
-            Colors.white.withOpacity(0.02),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const Spacer(),
-              Text(
-                subtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.white70,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectorAnalysis() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.08),
-              Colors.white.withOpacity(0.03),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Sector Allocation',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildSectorItem('Technology', 35.2, const Color(0xFF00FFA3)),
-            _buildSectorItem('Healthcare', 22.8, const Color(0xFF00D4FF)),
-            _buildSectorItem('Finance', 18.5, const Color(0xFFFF6B6B)),
-            _buildSectorItem('Energy', 12.3, const Color(0xFFFFD93D)),
-            _buildSectorItem('Consumer', 11.2, const Color(0xFF9C27B0)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectorItem(String sector, double percentage, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                sector,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                '${percentage.toStringAsFixed(1)}%',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 8,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: percentage / 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color, color.withOpacity(0.7)],
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRiskMetrics() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Risk Analysis',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.05),
-                    Colors.white.withOpacity(0.02),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  _buildRiskItem('Volatility', '12.3%', 'Medium'),
-                  _buildRiskItem('Beta', '1.15', 'Above Market'),
-                  _buildRiskItem('VaR (95%)', '-\$2,450', 'Low Risk'),
-                  _buildRiskItem('Correlation', '0.78', 'High'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRiskItem(String metric, String value, String status) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            metric,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.white70,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Row(
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(status).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  status,
+                Text(
+                  _selectedMetric,
                   style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: _getStatusColor(status),
-                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Expanded(child: _buildChart(portfolio)),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Low Risk':
-        return const Color(0xFF00FFA3);
-      case 'Medium':
-        return const Color(0xFFFFD93D);
-      case 'High':
-        return const Color(0xFFFF6B6B);
-      case 'Above Market':
-        return const Color(0xFF00D4FF);
+  Widget _buildChart(PortfolioProvider portfolio) {
+    final data = _getChartData(portfolio);
+
+    if (data.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.analytics_outlined,
+              size: 48,
+              color: Colors.white.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No data available yet',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start trading to see your analytics',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.3),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return CustomPaint(
+      size: const Size(double.infinity, double.infinity),
+      painter: _ChartPainter(data, _selectedMetric),
+    );
+  }
+
+  Map<String, List<double>> _getChartData(PortfolioProvider portfolio) {
+    switch (_selectedMetric) {
+      case 'Portfolio Value':
+        final history = portfolio.portfolioValueHistory;
+        if (history.isEmpty) return {};
+        return {'Portfolio': history.map((point) => point.value).toList()};
+      case 'P&L':
+        final history = portfolio.portfolioValueHistory;
+        if (history.isEmpty) return {};
+        return {'P&L': history.map((point) => point.value - 100000.0).toList()};
+      case 'Holdings Breakdown':
+        return _getHoldingsBreakdownData(portfolio);
+      case 'Trading Activity':
+        return _getTradingActivityData(portfolio);
+      case 'Performance':
+        return _getPerformanceData(portfolio);
       default:
-        return Colors.white70;
+        return {};
     }
   }
 
-  Widget _buildTradingInsights() {
+  Map<String, List<double>> _getHoldingsBreakdownData(
+    PortfolioProvider portfolio,
+  ) {
+    final holdings = portfolio.holdings;
+    final currentPrices = portfolio.currentPrices;
+
+    Map<String, List<double>> data = {};
+
+    for (final symbol in holdings.keys) {
+      final currentPrice = currentPrices[symbol] ?? 0.0;
+      final value = (holdings[symbol] ?? 0) * currentPrice;
+
+      if (value > 0) {
+        data[symbol] = [value];
+      }
+    }
+
+    return data;
+  }
+
+  Map<String, List<double>> _getTradingActivityData(
+    PortfolioProvider portfolio,
+  ) {
+    final transactions = portfolio.transactionHistory;
+
+    if (transactions.isEmpty) return {};
+
+    // Group transactions by day
+    Map<String, int> tradesPerDay = {};
+    for (final transaction in transactions) {
+      final day = transaction.timestamp.toIso8601String().substring(0, 10);
+      tradesPerDay[day] = (tradesPerDay[day] ?? 0) + 1;
+    }
+
+    return {
+      'Trades': tradesPerDay.values.map((count) => count.toDouble()).toList(),
+    };
+  }
+
+  Map<String, List<double>> _getPerformanceData(PortfolioProvider portfolio) {
+    final history = portfolio.portfolioValueHistory;
+
+    if (history.length < 2) return {};
+
+    List<double> dailyReturns = [];
+    for (int i = 1; i < history.length; i++) {
+      final returnPercent =
+          ((history[i].value - history[i - 1].value) / history[i - 1].value) *
+          100;
+      dailyReturns.add(returnPercent);
+    }
+
+    return {'Daily Returns %': dailyReturns};
+  }
+
+  Widget _buildInsightsSection(PortfolioProvider portfolio) {
     return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.08),
-              Colors.white.withOpacity(0.03),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Trading Insights',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Key Insights',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            _buildInsightCard(
-              'Best Performing Stock',
-              'AAPL',
-              '+12.5%',
-              'Apple Inc.',
-              const Color(0xFF00FFA3),
-            ),
-            _buildInsightCard(
-              'Most Traded',
-              'TSLA',
-              '15 trades',
-              'Tesla Inc.',
-              const Color(0xFF00D4FF),
-            ),
-            _buildInsightCard(
-              'Biggest Gain',
-              'NVDA',
-              '+8.2%',
-              'NVIDIA Corp.',
-              const Color(0xFF9C27B0),
-            ),
-          ],
+              const SizedBox(height: 16),
+              _buildInsightItem(
+                'Portfolio Diversification',
+                '${portfolio.holdings.length} different stocks',
+                portfolio.holdings.length >= 3 ? Colors.green : Colors.orange,
+                portfolio.holdings.length >= 3
+                    ? 'Well diversified!'
+                    : 'Consider diversifying more',
+              ),
+              _buildInsightItem(
+                'Cash Allocation',
+                '${((portfolio.virtualCash / portfolio.totalPortfolioValue) * 100).toStringAsFixed(1)}% in cash',
+                portfolio.virtualCash / portfolio.totalPortfolioValue > 0.2
+                    ? Colors.blue
+                    : Colors.orange,
+                portfolio.virtualCash / portfolio.totalPortfolioValue > 0.2
+                    ? 'Good cash reserve'
+                    : 'Consider investing more',
+              ),
+              _buildInsightItem(
+                'Trading Activity',
+                '${portfolio.totalTrades} total trades',
+                portfolio.totalTrades > 0 ? Colors.green : Colors.grey,
+                portfolio.totalTrades > 0
+                    ? 'Active trader!'
+                    : 'Start trading to see activity',
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildInsightCard(
+  Widget _buildInsightItem(
     String title,
-    String symbol,
     String value,
-    String company,
     Color color,
+    String description,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                symbol.substring(0, 1),
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1483,29 +514,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 Text(
                   title,
                   style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  '$symbol - $company',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  value,
+                  style: GoogleFonts.inter(fontSize: 12, color: color),
+                ),
+                Text(
+                  description,
+                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white60),
                 ),
               ],
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
             ),
           ),
         ],
@@ -1513,42 +535,170 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildMarketComparison() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Market Comparison',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+  Widget _buildHoldingsBreakdown(PortfolioProvider portfolio) {
+    final holdings = portfolio.holdings;
+    final currentPrices = portfolio.currentPrices;
+
+    if (holdings.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 48,
+                    color: Colors.white.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Holdings Yet',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start trading to build your portfolio',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.white60,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildComparisonCard(
-                    'Your Portfolio',
-                    '+4.25%',
-                    const Color(0xFF00FFA3),
-                    true,
-                  ),
+          ),
+        ),
+      );
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Current Holdings',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildComparisonCard(
-                    'S&P 500',
-                    '+2.1%',
-                    const Color(0xFF00D4FF),
-                    false,
+              ),
+              const SizedBox(height: 16),
+              ...holdings.entries.map((entry) {
+                final symbol = entry.key;
+                final quantity = entry.value;
+                final currentPrice = currentPrices[symbol] ?? 0.0;
+                final value = quantity * currentPrice;
+                final purchasePrice =
+                    portfolio.getPurchasePrice(symbol) ?? currentPrice;
+                final gainLoss = (currentPrice - purchasePrice) * quantity;
+                final gainLossPercent = purchasePrice > 0
+                    ? ((currentPrice - purchasePrice) / purchasePrice) * 100
+                    : 0.0;
+
+                return _buildHoldingItem(
+                  symbol,
+                  quantity,
+                  currentPrice,
+                  value,
+                  gainLoss,
+                  gainLossPercent,
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHoldingItem(
+    String symbol,
+    int quantity,
+    double currentPrice,
+    double value,
+    double gainLoss,
+    double gainLossPercent,
+  ) {
+    final isPositive = gainLoss >= 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F0F0F),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    symbol,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    '$quantity shares @ \$${currentPrice.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.white60,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$${value.toStringAsFixed(0)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '${isPositive ? '+' : ''}\$${gainLoss.toStringAsFixed(0)} (${isPositive ? '+' : ''}${gainLossPercent.toStringAsFixed(1)}%)',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: isPositive ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1556,192 +706,213 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildComparisonCard(
-    String title,
-    String performance,
-    Color color,
-    bool isHighlighted,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: isHighlighted
-            ? LinearGradient(
-                colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
-              )
-            : LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.05),
-                  Colors.white.withOpacity(0.02),
+  Widget _buildTradingStats(PortfolioProvider portfolio) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Trading Statistics',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      'Total Trades',
+                      '${portfolio.totalTrades}',
+                      Colors.blue,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      'Holdings',
+                      '${portfolio.holdings.length}',
+                      Colors.green,
+                    ),
+                  ),
                 ],
               ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isHighlighted
-              ? color.withOpacity(0.3)
-              : Colors.white.withOpacity(0.1),
-          width: isHighlighted ? 2 : 1,
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      'AI Chats',
+                      '${portfolio.aiChatCount}',
+                      Colors.purple,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      'Level',
+                      '${portfolio.userLevel}',
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        boxShadow: isHighlighted
-            ? [
-                BoxShadow(
-                  color: color.withOpacity(0.2),
-                  blurRadius: 12,
-                  spreadRadius: 0,
-                ),
-              ]
-            : null,
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F0F0F),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         children: [
           Text(
-            title,
+            value,
             style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.white70,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            performance,
-            style: GoogleFonts.inter(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomPadding() {
-    return const SliverToBoxAdapter(child: SizedBox(height: 100));
+  String _getBestPerformer(PortfolioProvider portfolio) {
+    final holdings = portfolio.holdings;
+    final currentPrices = portfolio.currentPrices;
+
+    if (holdings.isEmpty) return 'N/A';
+
+    String bestSymbol = '';
+    double bestGain = double.negativeInfinity;
+
+    for (final entry in holdings.entries) {
+      final symbol = entry.key;
+      final quantity = entry.value;
+      final currentPrice = currentPrices[symbol] ?? 0.0;
+      final purchasePrice = portfolio.getPurchasePrice(symbol) ?? currentPrice;
+
+      if (purchasePrice > 0) {
+        final gain = ((currentPrice - purchasePrice) / purchasePrice) * 100;
+        if (gain > bestGain) {
+          bestGain = gain;
+          bestSymbol = symbol;
+        }
+      }
+    }
+
+    return bestSymbol.isEmpty ? 'N/A' : bestSymbol;
+  }
+
+  String _getBestPerformerChange(PortfolioProvider portfolio) {
+    final holdings = portfolio.holdings;
+    final currentPrices = portfolio.currentPrices;
+
+    if (holdings.isEmpty) return 'N/A';
+
+    double bestGain = double.negativeInfinity;
+
+    for (final entry in holdings.entries) {
+      final symbol = entry.key;
+      final currentPrice = currentPrices[symbol] ?? 0.0;
+      final purchasePrice = portfolio.getPurchasePrice(symbol) ?? currentPrice;
+
+      if (purchasePrice > 0) {
+        final gain = ((currentPrice - purchasePrice) / purchasePrice) * 100;
+        if (gain > bestGain) {
+          bestGain = gain;
+        }
+      }
+    }
+
+    return bestGain == double.negativeInfinity
+        ? 'N/A'
+        : '${bestGain.toStringAsFixed(1)}%';
   }
 }
 
-class AdvancedChartPainter extends CustomPainter {
-  final List<double> portfolioData;
-  final List<double> sp500Data;
-  final double animationValue;
+class _ChartPainter extends CustomPainter {
+  final Map<String, List<double>> data;
+  final String metric;
 
-  AdvancedChartPainter({
-    required this.portfolioData,
-    required this.sp500Data,
-    required this.animationValue,
-  });
+  _ChartPainter(this.data, this.metric);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (portfolioData.isEmpty || sp500Data.isEmpty) return;
+    if (data.isEmpty) return;
 
-    // Calculate combined min/max for both datasets
-    final allData = [...portfolioData, ...sp500Data];
-    final minValue = allData.reduce((a, b) => a < b ? a : b);
-    final maxValue = allData.reduce((a, b) => a > b ? a : b);
-    final range = maxValue - minValue;
-
-    // Draw S&P 500 line first (background)
-    _drawDataLine(
-      canvas,
-      size,
-      sp500Data,
-      minValue,
-      range,
-      const Color(0xFF00D4FF),
-      Colors.white70,
-      2.0,
-    );
-
-    // Draw portfolio line on top
-    _drawDataLine(
-      canvas,
-      size,
-      portfolioData,
-      minValue,
-      range,
-      const Color(0xFF00FFA3),
-      const Color(0xFF00FFA3),
-      3.0,
-    );
-  }
-
-  void _drawDataLine(
-    Canvas canvas,
-    Size size,
-    List<double> data,
-    double minValue,
-    double range,
-    Color lineColor,
-    Color pointColor,
-    double strokeWidth,
-  ) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..color = lineColor;
+      ..strokeWidth = 2.0;
 
-    final path = Path();
-    final points = <Offset>[];
+    final colors = [
+      const Color(0xFF00FFA3),
+      const Color(0xFF00D4FF),
+      const Color(0xFFFF6B6B),
+      const Color(0xFFFFD93D),
+      const Color(0xFF6BCF7F),
+    ];
 
-    for (int i = 0; i < data.length; i++) {
-      final x = (i / (data.length - 1)) * size.width;
-      final y = size.height - ((data[i] - minValue) / range) * size.height;
-      points.add(Offset(x, y));
-    }
+    int colorIndex = 0;
+    for (final entry in data.entries) {
+      final values = entry.value;
+      if (values.isEmpty) continue;
 
-    // Draw line
-    path.moveTo(points.first.dx, points.first.dy);
-    for (int i = 1; i < points.length; i++) {
-      final currentPoint = points[i];
-      final previousPoint = points[i - 1];
+      paint.color = colors[colorIndex % colors.length];
 
-      final controlPoint1 = Offset(
-        previousPoint.dx + (currentPoint.dx - previousPoint.dx) / 3,
-        previousPoint.dy,
-      );
-      final controlPoint2 = Offset(
-        currentPoint.dx - (currentPoint.dx - previousPoint.dx) / 3,
-        currentPoint.dy,
-      );
+      final path = Path();
+      final maxValue = values.reduce((a, b) => a > b ? a : b);
+      final minValue = values.reduce((a, b) => a < b ? a : b);
+      final range = maxValue - minValue;
 
-      path.cubicTo(
-        controlPoint1.dx,
-        controlPoint1.dy,
-        controlPoint2.dx,
-        controlPoint2.dy,
-        currentPoint.dx,
-        currentPoint.dy,
-      );
-    }
+      if (range == 0) {
+        // All values are the same, draw a horizontal line
+        final y = size.height * 0.5;
+        path.moveTo(0, y);
+        path.lineTo(size.width, y);
+      } else {
+        for (int i = 0; i < values.length; i++) {
+          final x = (i / (values.length - 1)) * size.width;
+          final y =
+              size.height - ((values[i] - minValue) / range) * size.height;
 
-    canvas.drawPath(path, paint);
-
-    // Draw data points
-    final pointPaint = Paint()
-      ..color = pointColor
-      ..style = PaintingStyle.fill;
-
-    for (int i = 0; i < points.length; i += 3) {
-      final point = points[i];
-      canvas.drawCircle(point, 3, pointPaint);
-      if (pointColor == const Color(0xFF00FFA3)) {
-        canvas.drawCircle(point, 1.5, Paint()..color = Colors.white);
+          if (i == 0) {
+            path.moveTo(x, y);
+          } else {
+            path.lineTo(x, y);
+          }
+        }
       }
+
+      canvas.drawPath(path, paint);
+      colorIndex++;
     }
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-// Add mascot popup method to the main class
-extension AnalyticsScreenMascot on _AnalyticsScreenState {
-  void _showMascotPopup(MascotTrigger trigger) {
-    // Use the global mascot popup system
-    GlobalMascotManager.showMascotPopup(trigger);
-  }
 }

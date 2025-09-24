@@ -21,7 +21,7 @@ import 'api_test_screen.dart';
 import 'functionality_test_screen.dart';
 import 'settings_screen.dart';
 import '../services/mascot_manager_service.dart';
-import '../services/global_mascot_manager.dart';
+import '../services/dynamic_quest_generator.dart';
 
 // Data models
 class Quest {
@@ -67,6 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _loadUserData();
     _initializeRealTimeUpdates();
+    _generateDynamicQuests();
   }
 
   void _initializeRealTimeUpdates() {
@@ -75,6 +76,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final portfolio = context.read<PortfolioProvider>();
       portfolio.initializeRealTimeUpdates();
     });
+  }
+
+  Future<void> _generateDynamicQuests() async {
+    if (_questsGenerated) return;
+
+    try {
+      final portfolio = context.read<PortfolioProvider>();
+
+      // Generate personalized quests based on user's portfolio
+      final dynamicQuests =
+          await DynamicQuestGenerator.generatePersonalizedQuests(
+            holdings: portfolio.holdings,
+            virtualCash: portfolio.virtualCash,
+            totalPortfolioValue: portfolio.totalPortfolioValue,
+            userLevel: portfolio.userLevel,
+            totalTrades: portfolio.totalTrades,
+            transactionHistory: portfolio.transactionHistory
+                .map(
+                  (t) => {
+                    'symbol': t.symbol,
+                    'quantity': t.quantity,
+                    'price': t.price,
+                    'type': t.type.name,
+                    'timestamp': t.timestamp.toIso8601String(),
+                  },
+                )
+                .toList(),
+            currentPrices: portfolio.currentPrices,
+          );
+
+      // Convert Challenge objects to Quest objects for the UI
+      dailyQuests = dynamicQuests
+          .map(
+            (challenge) => Quest(
+              id: challenge.id.hashCode,
+              title: challenge.title,
+              icon: challenge.icon ?? '🎯',
+              isCompleted: challenge.isCompleted,
+              progress: challenge.completionPercentage,
+            ),
+          )
+          .toList();
+
+      _questsGenerated = true;
+
+      if (mounted) {
+        setState(() {});
+      }
+
+      print('🎯 Generated ${dailyQuests.length} personalized quests');
+    } catch (e) {
+      print('Error generating dynamic quests: $e');
+      // Fallback to basic quests
+      _generateFallbackQuests();
+    }
+  }
+
+  void _generateFallbackQuests() {
+    dailyQuests = [
+      Quest(
+        id: 1,
+        title: "Make your first trade",
+        icon: "💰",
+        isCompleted: false,
+        progress: 0.0,
+      ),
+      Quest(
+        id: 2,
+        title: "Earn 100 XP",
+        icon: "⭐",
+        isCompleted: false,
+        progress: 0.0,
+      ),
+      Quest(
+        id: 3,
+        title: "Complete 3 trades",
+        icon: "📈",
+        isCompleted: false,
+        progress: 0.0,
+      ),
+      Quest(
+        id: 4,
+        title: "Diversify your portfolio",
+        icon: "🌐",
+        isCompleted: false,
+        progress: 0.0,
+      ),
+    ];
+    _questsGenerated = true;
   }
 
   Future<void> _loadUserData() async {
@@ -182,37 +272,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     102500,
   ];
 
-  // Mock quest data - matching quest completion logic
-  final List<Quest> dailyQuests = [
-    Quest(
-      id: 1,
-      title: "Make your first trade",
-      icon: "💰",
-      isCompleted: false,
-      progress: 0.0,
-    ),
-    Quest(
-      id: 2,
-      title: "Earn 100 XP",
-      icon: "⭐",
-      isCompleted: false,
-      progress: 0.0,
-    ),
-    Quest(
-      id: 3,
-      title: "Complete 3 trades",
-      icon: "📈",
-      isCompleted: false,
-      progress: 0.0,
-    ),
-    Quest(
-      id: 4,
-      title: "Diversify your portfolio",
-      icon: "🌐",
-      isCompleted: false,
-      progress: 0.0,
-    ),
-  ];
+  // Dynamic quests will be generated based on user's portfolio
+  List<Quest> dailyQuests = [];
+  bool _questsGenerated = false;
 
   // Achievements are now fetched from PortfolioProvider
 
@@ -222,17 +284,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_isLoading) {
       return Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF0F0F23),
-                Color(0xFF1A1A2E),
-                Color(0xFF16213E),
-                Color(0xFF0F3460),
+                Theme.of(context).scaffoldBackgroundColor,
+                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.6),
+                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.4),
               ],
-              stops: [0.0, 0.3, 0.7, 1.0],
+              stops: const [0.0, 0.3, 0.7, 1.0],
             ),
           ),
           child: const Center(
@@ -253,7 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: GoogleFonts.orbitron(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: Colors.white,
+            color: Theme.of(context).textTheme.titleLarge?.color,
           ),
         ),
         actions: [
@@ -303,17 +365,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0F0F23),
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.6),
+              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.4),
             ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+            stops: const [0.0, 0.3, 0.7, 1.0],
           ),
         ),
         child: SafeArea(
@@ -966,11 +1028,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (progress >= 1.0 && !isCompleted) {
       quest.isCompleted = true;
       print('🎉 Quest completed: ${quest.title}');
-      // Show quest completion mascot popup after build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        print('🦊 Triggering quest completion mascot popup');
-        GlobalMascotManager.showMascotPopup(MascotTrigger.questComplete);
-      });
+      // Note: Quest completion mascot popup is handled by the trade screen
+      // to avoid duplicate popups when trading
     }
 
     return Container(
@@ -1348,37 +1407,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _calculateQuestProgress(Quest quest, PortfolioProvider portfolio) {
     double progress = 0.0;
 
-    switch (quest.title.toLowerCase()) {
-      case 'make your first trade':
-        progress = portfolio.totalTrades > 0 ? 1.0 : 0.0;
-        break;
-      case 'earn 100 xp':
+    // Handle dynamic quests based on their objectives
+    final title = quest.title.toLowerCase();
+
+    if (title.contains('first trade') ||
+        title.contains('make') && title.contains('trade')) {
+      progress = portfolio.totalTrades > 0 ? 1.0 : 0.0;
+    } else if (title.contains('earn') && title.contains('xp')) {
+      // Extract XP amount from quest title
+      final xpMatch = RegExp(r'(\d+)').firstMatch(quest.title);
+      if (xpMatch != null) {
+        final targetXp = int.parse(xpMatch.group(1)!);
+        progress = (portfolio.userXp / targetXp).clamp(0.0, 1.0);
+      } else {
         progress = (portfolio.userXp / 100).clamp(0.0, 1.0);
-        break;
-      case 'complete 3 trades':
+      }
+    } else if (title.contains('complete') && title.contains('trade')) {
+      // Extract number of trades from quest title
+      final tradeMatch = RegExp(r'(\d+)').firstMatch(quest.title);
+      if (tradeMatch != null) {
+        final targetTrades = int.parse(tradeMatch.group(1)!);
+        progress = (portfolio.totalTrades / targetTrades).clamp(0.0, 1.0);
+      } else {
         progress = (portfolio.totalTrades / 3).clamp(0.0, 1.0);
-        break;
-      case 'reach level 2':
-        progress = portfolio.userLevel >= 2
-            ? 1.0
-            : (portfolio.userXp / 1000).clamp(0.0, 1.0);
-        break;
-      case 'diversify your portfolio':
-        progress = (portfolio.portfolio.length / 3).clamp(0.0, 1.0);
-        break;
-      case 'earn 500 xp':
-        progress = (portfolio.userXp / 500).clamp(0.0, 1.0);
-        break;
-      case 'complete 5 trades':
-        progress = (portfolio.totalTrades / 5).clamp(0.0, 1.0);
-        break;
-      case 'reach level 3':
-        progress = portfolio.userLevel >= 3
-            ? 1.0
-            : ((portfolio.userXp - 1000) / 2000).clamp(0.0, 1.0);
-        break;
-      default:
-        progress = 0.0;
+      }
+    } else if (title.contains('diversify') || title.contains('sector')) {
+      // Check if user has stocks from different sectors
+      final sectors = _getPortfolioSectors(portfolio.holdings);
+      progress = (sectors.length / 2).clamp(0.0, 1.0);
+    } else if (title.contains('risk') || title.contains('concentration')) {
+      // Check portfolio concentration
+      final concentration = _calculatePortfolioConcentration(portfolio);
+      progress = concentration > 0.3 ? 0.0 : 1.0;
+    } else if (title.contains('level')) {
+      // Extract level from quest title
+      final levelMatch = RegExp(r'level (\d+)').firstMatch(quest.title);
+      if (levelMatch != null) {
+        final targetLevel = int.parse(levelMatch.group(1)!);
+        progress = portfolio.userLevel >= targetLevel ? 1.0 : 0.0;
+      }
+    } else if (title.contains('read') && title.contains('article')) {
+      // Learning quests - for now, return 0 as we don't track this yet
+      progress = 0.0;
+    } else {
+      // Fallback to basic progress calculation
+      progress = quest.progress;
     }
 
     print(
@@ -1386,6 +1459,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     return progress;
+  }
+
+  List<String> _getPortfolioSectors(Map<String, int> holdings) {
+    final sectorMapping = {
+      'AAPL': 'Technology',
+      'MSFT': 'Technology',
+      'GOOGL': 'Technology',
+      'META': 'Technology',
+      'NVDA': 'Technology',
+      'AMD': 'Technology',
+      'INTC': 'Technology',
+      'TSLA': 'Automotive',
+      'AMZN': 'Consumer Discretionary',
+      'NFLX': 'Communication Services',
+      'JPM': 'Financial',
+      'JNJ': 'Healthcare',
+      'PG': 'Consumer Staples',
+      'KO': 'Consumer Staples',
+      'WMT': 'Consumer Staples',
+      'XOM': 'Energy',
+      'CVX': 'Energy',
+    };
+
+    final sectors = <String>{};
+    for (final symbol in holdings.keys) {
+      final sector = sectorMapping[symbol] ?? 'Other';
+      sectors.add(sector);
+    }
+    return sectors.toList();
+  }
+
+  double _calculatePortfolioConcentration(PortfolioProvider portfolio) {
+    if (portfolio.holdings.isEmpty) return 0.0;
+
+    double totalValue = portfolio.totalPortfolioValue;
+    if (totalValue == 0) return 0.0;
+
+    double maxValue = 0.0;
+    for (final entry in portfolio.holdings.entries) {
+      final symbol = entry.key;
+      final quantity = entry.value;
+      final price = portfolio.currentPrices[symbol] ?? 0.0;
+      final value = quantity * price;
+      if (value > maxValue) {
+        maxValue = value;
+      }
+    }
+
+    return maxValue / totalValue;
   }
 
   // Real-time Market Movers using Finnhub API

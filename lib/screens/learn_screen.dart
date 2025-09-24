@@ -140,19 +140,19 @@ class _LearnScreenState extends State<LearnScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0A0A0A),
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.6),
+              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.4),
             ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+            stops: const [0.0, 0.3, 0.7, 1.0],
           ),
         ),
         child: CustomScrollView(
@@ -161,11 +161,7 @@ class _LearnScreenState extends State<LearnScreen>
             _buildStatsSection(),
             _buildMascotSection(),
             _buildFilterSection(),
-            _buildFeaturedCourses(),
-            _buildLearningPaths(),
-            _buildVideoTutorials(),
             _buildInteractiveTools(),
-            _buildResources(),
             _buildBottomPadding(),
           ],
         ),
@@ -382,7 +378,7 @@ class _LearnScreenState extends State<LearnScreen>
                         Expanded(
                           child: _buildStatCard(
                             'Courses Completed',
-                            '12',
+                            '0',
                             Icons.school,
                             const Color(0xFF00FFA3),
                           ),
@@ -391,7 +387,7 @@ class _LearnScreenState extends State<LearnScreen>
                         Expanded(
                           child: _buildStatCard(
                             'Learning Streak',
-                            '7 days',
+                            '0 days',
                             Icons.local_fire_department,
                             const Color(0xFFFF6B6B),
                           ),
@@ -404,7 +400,7 @@ class _LearnScreenState extends State<LearnScreen>
                         Expanded(
                           child: _buildStatCard(
                             'XP Earned',
-                            '2,450',
+                            '0',
                             Icons.star,
                             const Color(0xFFFFD700),
                           ),
@@ -413,7 +409,7 @@ class _LearnScreenState extends State<LearnScreen>
                         Expanded(
                           child: _buildStatCard(
                             'Certificates',
-                            '3',
+                            '0',
                             Icons.workspace_premium,
                             const Color(0xFF00D4FF),
                           ),
@@ -855,241 +851,6 @@ class _LearnScreenState extends State<LearnScreen>
     );
   }
 
-  Widget _buildFeaturedCourses() {
-    return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _cardAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 40 * (1 - _cardAnimation.value)),
-            child: Opacity(
-              opacity: _cardAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Featured Courses',
-                          style: GoogleFonts.orbitron(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () {},
-                          child: Text(
-                            'View All',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF00FFA3),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 280,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _getFeaturedCourses().length,
-                        itemBuilder: (context, index) {
-                          final course = _getFeaturedCourses()[index];
-                          return _buildCourseCard(course, index);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCourseCard(Map<String, dynamic> course, int index) {
-    return Container(
-      width: 250,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [course['color1'] as Color, course['color2'] as Color],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: (course['color1'] as Color).withOpacity(0.3),
-            blurRadius: 15,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            // Background pattern
-            Positioned(
-              top: -20,
-              right: -20,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          course['icon'] as IconData,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          course['difficulty'] as String,
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    course['title'] as String,
-                    style: GoogleFonts.orbitron(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    course['description'] as String,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.white70,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, color: Colors.white70, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        course['duration'] as String,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white70,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.star,
-                        color: const Color(0xFFFFD700),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        course['rating'] as String,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLearningPaths() {
-    return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _cardAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 30 * (1 - _cardAnimation.value)),
-            child: Opacity(
-              opacity: _cardAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Learning Paths',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ...List.generate(
-                      _getLearningPaths().length,
-                      (index) => _buildLearningPathCard(
-                        _getLearningPaths()[index],
-                        index,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildLearningPathCard(Map<String, dynamic> path, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1113,262 +874,63 @@ class _LearnScreenState extends State<LearnScreen>
           ),
         ],
       ),
-      child: Row(
+      child: Stack(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [path['color1'] as Color, path['color2'] as Color],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              path['icon'] as IconData,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  path['title'] as String,
-                  style: GoogleFonts.orbitron(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  path['description'] as String,
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      '${path['lessons']} lessons',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: const Color(0xFF00FFA3),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      path['duration'] as String,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white60,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          AnimatedBuilder(
-            animation: _progressAnimation,
-            builder: (context, child) {
-              return Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-                child: Stack(
-                  children: [
-                    CircularProgressIndicator(
-                      value:
-                          (path['progress'] as double) *
-                          _progressAnimation.value,
-                      strokeWidth: 3,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        path['color1'] as Color,
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        '${((path['progress'] as double) * 100).toInt()}%',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVideoTutorials() {
-    return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _cardAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 20 * (1 - _cardAnimation.value)),
-            child: Opacity(
-              opacity: _cardAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Video Tutorials',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 200,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _getVideoTutorials().length,
-                        itemBuilder: (context, index) {
-                          final video = _getVideoTutorials()[index];
-                          return _buildVideoCard(video, index);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildVideoCard(Map<String, dynamic> video, int index) {
-    return Container(
-      width: 300,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF00D4FF).withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            // Video thumbnail
-            Container(
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [video['color1'] as Color, video['color2'] as Color],
-                ),
-              ),
-              child: Center(
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Color(0xFF00D4FF),
-                    size: 30,
-                  ),
-                ),
-              ),
-            ),
-            // Duration badge
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  video['duration'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            // Content
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(16),
+          Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                    colors: [path['color1'] as Color, path['color2'] as Color],
                   ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(
+                  path['icon'] as IconData,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      video['title'] as String,
+                      path['title'] as String,
                       style: GoogleFonts.orbitron(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
+                    Text(
+                      path['description'] as String,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.person, color: Colors.white70, size: 12),
-                        const SizedBox(width: 4),
                         Text(
-                          video['instructor'] as String,
+                          '${path['lessons']} lessons',
                           style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.white70,
+                            fontSize: 12,
+                            color: const Color(0xFF00FFA3),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const Spacer(),
-                        Icon(Icons.visibility, color: Colors.white70, size: 12),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 16),
                         Text(
-                          video['views'] as String,
+                          path['duration'] as String,
                           style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.white70,
+                            fontSize: 12,
+                            color: Colors.white60,
                           ),
                         ),
                       ],
@@ -1376,9 +938,84 @@ class _LearnScreenState extends State<LearnScreen>
                   ],
                 ),
               ),
+              AnimatedBuilder(
+                animation: _progressAnimation,
+                builder: (context, child) {
+                  return Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.1),
+                    ),
+                    child: Stack(
+                      children: [
+                        CircularProgressIndicator(
+                          value:
+                              (path['progress'] as double) *
+                              _progressAnimation.value,
+                          strokeWidth: 3,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            path['color1'] as Color,
+                          ),
+                        ),
+                        Center(
+                          child: Text(
+                            '${((path['progress'] as double) * 100).toInt()}%',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          // Lock overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.lock,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Coming Soon',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1517,203 +1154,11 @@ class _LearnScreenState extends State<LearnScreen>
     }
   }
 
-  Widget _buildResources() {
-    return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _cardAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 20 * (1 - _cardAnimation.value)),
-            child: Opacity(
-              opacity: _cardAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Learning Resources',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ...List.generate(
-                      _getResources().length,
-                      (index) =>
-                          _buildResourceCard(_getResources()[index], index),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildResourceCard(Map<String, dynamic> resource, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: (resource['color'] as Color).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              resource['icon'] as IconData,
-              color: resource['color'] as Color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  resource['title'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  resource['description'] as String,
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, color: Colors.white60, size: 16),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomPadding() {
     return const SliverToBoxAdapter(child: SizedBox(height: 100));
   }
 
-  // Mock data methods
-  List<Map<String, dynamic>> _getFeaturedCourses() {
-    return [
-      {
-        'title': 'Stock Market Basics',
-        'description': 'Learn the fundamentals of stock trading',
-        'difficulty': 'Beginner',
-        'duration': '2h 30m',
-        'rating': '4.8',
-        'icon': Icons.trending_up,
-        'color1': const Color(0xFF00FFA3),
-        'color2': const Color(0xFF00D4FF),
-      },
-      {
-        'title': 'Options Trading Mastery',
-        'description': 'Advanced strategies for options trading',
-        'difficulty': 'Advanced',
-        'duration': '4h 15m',
-        'rating': '4.9',
-        'icon': Icons.analytics,
-        'color1': const Color(0xFF9C27B0),
-        'color2': const Color(0xFF673AB7),
-      },
-      {
-        'title': 'Cryptocurrency Guide',
-        'description': 'Complete guide to crypto investing',
-        'difficulty': 'Intermediate',
-        'duration': '3h 45m',
-        'rating': '4.7',
-        'icon': Icons.currency_bitcoin,
-        'color1': const Color(0xFFFFD700),
-        'color2': const Color(0xFFFFA500),
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> _getLearningPaths() {
-    return [
-      {
-        'title': 'Complete Trading Journey',
-        'description': 'From beginner to expert trader',
-        'lessons': 24,
-        'duration': '12 weeks',
-        'progress': 0.65,
-        'icon': Icons.route,
-        'color1': const Color(0xFF00FFA3),
-        'color2': const Color(0xFF00D4FF),
-      },
-      {
-        'title': 'Investment Strategies',
-        'description': 'Learn various investment approaches',
-        'lessons': 18,
-        'duration': '8 weeks',
-        'progress': 0.30,
-        'icon': Icons.account_balance,
-        'color1': const Color(0xFF9C27B0),
-        'color2': const Color(0xFF673AB7),
-      },
-      {
-        'title': 'Risk Management',
-        'description': 'Master the art of risk control',
-        'lessons': 12,
-        'duration': '6 weeks',
-        'progress': 0.80,
-        'icon': Icons.security,
-        'color1': const Color(0xFFFF6B6B),
-        'color2': const Color(0xFFFF8E53),
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> _getVideoTutorials() {
-    return [
-      {
-        'title': 'How to Read Candlestick Charts',
-        'instructor': 'Sarah Johnson',
-        'duration': '15:30',
-        'views': '12.5K',
-        'color1': const Color(0xFF00D4FF),
-        'color2': const Color(0xFF0097A7),
-      },
-      {
-        'title': 'Understanding Market Volatility',
-        'instructor': 'Mike Chen',
-        'duration': '22:15',
-        'views': '8.9K',
-        'color1': const Color(0xFF9C27B0),
-        'color2': const Color(0xFF673AB7),
-      },
-      {
-        'title': 'Portfolio Diversification',
-        'instructor': 'Emma Wilson',
-        'duration': '18:45',
-        'views': '15.2K',
-        'color1': const Color(0xFFFFD700),
-        'color2': const Color(0xFFFFA500),
-      },
-    ];
-  }
-
+  // Mock data methods - only keeping interactive tools
   List<Map<String, dynamic>> _getInteractiveTools() {
     return [
       {
@@ -1743,35 +1188,6 @@ class _LearnScreenState extends State<LearnScreen>
         'icon': Icons.quiz,
         'color1': const Color(0xFFFF6B6B),
         'color2': const Color(0xFFFF8E53),
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> _getResources() {
-    return [
-      {
-        'title': 'Financial Glossary',
-        'description': 'Comprehensive dictionary of terms',
-        'icon': Icons.book,
-        'color': const Color(0xFF00FFA3),
-      },
-      {
-        'title': 'Market News Feed',
-        'description': 'Latest financial news and updates',
-        'icon': Icons.newspaper,
-        'color': const Color(0xFF00D4FF),
-      },
-      {
-        'title': 'PDF Library',
-        'description': 'Downloadable guides and reports',
-        'icon': Icons.picture_as_pdf,
-        'color': const Color(0xFF9C27B0),
-      },
-      {
-        'title': 'Community Forum',
-        'description': 'Connect with other learners',
-        'icon': Icons.forum,
-        'color': const Color(0xFFFFD700),
       },
     ];
   }

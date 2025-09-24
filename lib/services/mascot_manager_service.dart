@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
+import 'gemini_ai_service.dart';
 
 enum MascotType { trader, investor, analyst, banker, entrepreneur, broker }
 
@@ -517,5 +518,104 @@ class MascotManagerService {
         ),
       ),
     );
+  }
+
+  // Generate AI-powered mascot message based on context
+  static Future<MascotMessage> generateAIMascotMessage(
+    MascotTrigger trigger, {
+    Map<String, dynamic>? context,
+  }) async {
+    try {
+      // Get base message from static context
+      final baseMessage =
+          _contextMessages[trigger] ?? _contextMessages[MascotTrigger.welcome]!;
+
+      // Create context-aware prompt for Gemini
+      String prompt = _createContextPrompt(trigger, context);
+
+      // Get AI response
+      final aiResponse = await GeminiAIService.getFinancialAdvice(prompt);
+
+      // Create mascot message with AI response but keep original mascot, emoji, and color
+      return MascotMessage(
+        message: aiResponse,
+        mascot: baseMessage.mascot,
+        emoji: baseMessage.emoji,
+        backgroundColor: baseMessage.backgroundColor,
+        duration: const Duration(seconds: 4),
+      );
+    } catch (e) {
+      print('Error generating AI mascot message: $e');
+      // Fallback to static message if AI fails
+      return _contextMessages[trigger] ??
+          _contextMessages[MascotTrigger.welcome]!;
+    }
+  }
+
+  // Create context-aware prompt for different triggers
+  static String _createContextPrompt(
+    MascotTrigger trigger,
+    Map<String, dynamic>? context,
+  ) {
+    String basePrompt =
+        "You are a friendly, encouraging financial mentor mascot in the Finx trading simulation app. ";
+
+    switch (trigger) {
+      case MascotTrigger.firstTrade:
+        return basePrompt +
+            "A user just made their very first trade! Give them an excited, welcoming message (under 30 words) celebrating this milestone and encouraging them to keep learning.";
+
+      case MascotTrigger.tradeSuccess:
+        final symbol = context?['symbol'] ?? 'stocks';
+        final quantity = context?['quantity'] ?? 'some';
+        return basePrompt +
+            "A user just successfully bought $quantity shares of $symbol! Give them an encouraging message (under 30 words) celebrating their trade and motivating them to continue learning.";
+
+      case MascotTrigger.tradeSellSuccess:
+        final symbol = context?['symbol'] ?? 'stocks';
+        final quantity = context?['quantity'] ?? 'some';
+        return basePrompt +
+            "A user just successfully sold $quantity shares of $symbol! Give them a smart, encouraging message (under 30 words) about the importance of knowing when to sell.";
+
+      case MascotTrigger.analyticsView:
+        return basePrompt +
+            "A user is viewing their analytics dashboard! Give them an encouraging message (under 30 words) about the importance of data analysis in investing.";
+
+      case MascotTrigger.questComplete:
+        final questTitle = context?['questTitle'] ?? 'a quest';
+        return basePrompt +
+            "A user just completed '$questTitle' quest! Give them a congratulatory message (under 30 words) celebrating their achievement and encouraging them to keep going.";
+
+      case MascotTrigger.notEnoughCash:
+        return basePrompt +
+            "A user tried to make a trade but doesn't have enough virtual cash! Give them a helpful, encouraging message (under 30 words) about money management and risk control.";
+
+      case MascotTrigger.portfolioGrowth:
+        final growthPercent = context?['growthPercent'] ?? 'positive';
+        return basePrompt +
+            "A user's portfolio is showing $growthPercent growth! Give them a congratulatory message (under 30 words) celebrating their success and encouraging continued learning.";
+
+      case MascotTrigger.marketCrash:
+        return basePrompt +
+            "The market is experiencing volatility! Give users a reassuring, educational message (under 30 words) about staying calm during market dips and seeing opportunities.";
+
+      case MascotTrigger.achievementUnlocked:
+        final achievement = context?['achievement'] ?? 'an achievement';
+        return basePrompt +
+            "A user just unlocked '$achievement'! Give them a celebratory message (under 30 words) congratulating them and encouraging them to earn more achievements.";
+
+      case MascotTrigger.levelUp:
+        final newLevel = context?['newLevel'] ?? 'a new level';
+        return basePrompt +
+            "A user just leveled up to $newLevel! Give them a congratulatory message (under 30 words) celebrating their progress and encouraging continued learning.";
+
+      case MascotTrigger.welcome:
+        return basePrompt +
+            "A user is logging into the app! Give them a warm, welcoming message (under 30 words) encouraging them to start their trading journey.";
+
+      case MascotTrigger.dailyTip:
+        return basePrompt +
+            "Give users a helpful daily trading tip (under 30 words) that's educational and encouraging for beginners learning about investing.";
+    }
   }
 }

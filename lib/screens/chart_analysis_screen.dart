@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../services/portfolio_provider.dart';
 
 class ChartAnalysisScreen extends StatefulWidget {
   const ChartAnalysisScreen({super.key});
@@ -848,29 +850,16 @@ class _ChartAnalysisScreenState extends State<ChartAnalysisScreen>
   }
 
   List<double> _getChartData() {
-    // Mock chart data - in real app, this would come from API
-    return [
-      100,
-      102,
-      98,
-      105,
-      110,
-      108,
-      115,
-      120,
-      118,
-      125,
-      130,
-      128,
-      135,
-      140,
-      138,
-      145,
-      142,
-      148,
-      150,
-      155,
-    ];
+    final portfolio = context.read<PortfolioProvider>();
+    final history = portfolio.portfolioValueHistory;
+
+    if (history.isEmpty) {
+      // Return starting value if no history
+      return [100000.0];
+    }
+
+    // Convert portfolio value history to chart data
+    return history.map((point) => point.value).toList();
   }
 
   List<Map<String, dynamic>> _getIndicatorData() {

@@ -194,17 +194,29 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
           // Add XP for first trade
           if (portfolio.transactionHistory.length == 1) {
             portfolio.addXp(250);
-            // Show first trade mascot popup
+            // Show first trade mascot popup with context
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              GlobalMascotManager.showMascotPopup(MascotTrigger.firstTrade);
+              GlobalMascotManager.showMascotPopup(
+                MascotTrigger.firstTrade,
+                context: {
+                  'symbol': _currentSymbol,
+                  'quantity': quantity,
+                  'isBuyMode': _isBuyMode,
+                },
+              );
             });
           } else {
-            // Show trade success mascot popup
+            // Show trade success mascot popup with context
             WidgetsBinding.instance.addPostFrameCallback((_) {
               GlobalMascotManager.showMascotPopup(
                 _isBuyMode
                     ? MascotTrigger.tradeSuccess
                     : MascotTrigger.tradeSellSuccess,
+                context: {
+                  'symbol': _currentSymbol,
+                  'quantity': quantity,
+                  'isBuyMode': _isBuyMode,
+                },
               );
             });
           }

@@ -9,24 +9,43 @@ class GlobalMascotManager {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
-  static void showMascotPopup(MascotTrigger trigger) {
+  static void showMascotPopup(
+    MascotTrigger trigger, {
+    Map<String, dynamic>? context,
+  }) {
     print('🦊 Mascot popup triggered: ${trigger.name}');
-    final context = navigatorKey.currentContext;
-    if (context == null) {
+    final navigatorContext = navigatorKey.currentContext;
+    if (navigatorContext == null) {
       print('❌ No context available for mascot popup');
       return;
     }
 
-    final message = MascotManagerService.getMessageForContext(trigger);
-    print('📝 Mascot message: ${message.message}');
+    // Generate AI-powered message
+    MascotManagerService.generateAIMascotMessage(trigger, context: context)
+        .then((message) {
+          print('📝 AI Mascot message: ${message.message}');
 
-    // Show as a bottom sheet instead of snackbar
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _MascotPopupWidget(message: message),
-    );
+          // Show as a bottom sheet instead of snackbar
+          showModalBottomSheet(
+            context: navigatorContext,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder: (context) => _MascotPopupWidget(message: message),
+          );
+        })
+        .catchError((error) {
+          print('❌ Error generating AI mascot message: $error');
+          // Fallback to static message
+          final fallbackMessage = MascotManagerService.getMessageForContext(
+            trigger,
+          );
+          showModalBottomSheet(
+            context: navigatorContext,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder: (context) => _MascotPopupWidget(message: fallbackMessage),
+          );
+        });
   }
 }
 
@@ -77,16 +96,7 @@ class _MascotPopupWidgetState extends State<_MascotPopupWidget>
     _slideController.forward();
     _bounceController.forward();
 
-    // Auto-dismiss after duration
-    Future.delayed(widget.message.duration, () {
-      if (mounted) {
-        _slideController.reverse().then((_) {
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
-        });
-      }
-    });
+    // No auto-dismiss - user must manually close
   }
 
   @override
@@ -112,8 +122,8 @@ class _MascotPopupWidgetState extends State<_MascotPopupWidget>
                 // Speech Bubble
                 Flexible(
                   child: Container(
-                    constraints: const BoxConstraints(maxWidth: 280),
-                    padding: const EdgeInsets.all(16),
+                    constraints: const BoxConstraints(maxWidth: 350),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -138,17 +148,17 @@ class _MascotPopupWidgetState extends State<_MascotPopupWidget>
                         Text(
                           '${widget.message.emoji} ${MascotManagerService.getMascotName(widget.message.mascot)}',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: widget.message.backgroundColor,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         // Message
                         Text(
                           widget.message.message,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 16,
                             color: Colors.black87,
                             height: 1.4,
                             fontWeight: FontWeight.w500,
@@ -168,8 +178,8 @@ class _MascotPopupWidgetState extends State<_MascotPopupWidget>
                       child: Transform.translate(
                         offset: Offset(0, -10 * (1 - _bounceAnimation.value)),
                         child: Container(
-                          width: 80,
-                          height: 80,
+                          width: 100,
+                          height: 100,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
@@ -193,7 +203,7 @@ class _MascotPopupWidgetState extends State<_MascotPopupWidget>
                                   color: Colors.grey[300],
                                   child: const Icon(
                                     Icons.pets,
-                                    size: 40,
+                                    size: 50,
                                     color: Colors.grey,
                                   ),
                                 );
