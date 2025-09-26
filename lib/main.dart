@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'firebase_options.dart';
 import 'auth/auth_gate.dart';
 import 'screens/signup_screen.dart';
@@ -15,6 +15,7 @@ import 'services/performance_monitor.dart';
 import 'services/data_cache.dart';
 import 'widgets/app_with_floating_ai.dart';
 import 'services/global_mascot_manager.dart';
+import 'theme/liquid_material_theme.dart';
 
 // To make GoogleFonts work, add this to your pubspec.yaml file:
 // dependencies:
@@ -27,6 +28,9 @@ void main() async {
   // Initialize services
   await DataCache().clearExpiredCache();
   PerformanceMonitor().logMemoryUsage('App Start');
+
+  // Uncomment the line below to force sign out on app start (for testing)
+  // await FirebaseAuth.instance.signOut();
 
   runApp(const MyApp());
 }
@@ -51,7 +55,12 @@ class MyApp extends StatelessWidget {
 
         // Enhanced portfolio provider with real-time data
         ChangeNotifierProvider(
-          create: (context) => EnhancedPortfolioProvider(),
+          create: (context) {
+            final provider = EnhancedPortfolioProvider();
+            // Initialize real-time data loading
+            provider.initializeRealTimeData();
+            return provider;
+          },
         ),
 
         // Real-time data service
@@ -63,24 +72,41 @@ class MyApp extends StatelessWidget {
         // Data cache
         Provider(create: (context) => DataCache()),
       ],
-      child: MaterialApp(
-        navigatorKey: GlobalMascotManager.navigatorKey,
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF121212),
-          textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF00FFA3),
-            secondary: Color(0xFFB0B0B0),
-            onPrimary: Colors.black,
-          ),
-        ),
-        home: const AppWithFloatingAI(child: AuthGate()),
-        builder: (context, child) {
-          return AppWithFloatingAI(
-            child: child!,
-            showFloatingAI: _shouldShowFloatingAI(context),
+      child: DynamicColorBuilder(
+        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+          ColorScheme lightColorScheme;
+          ColorScheme darkColorScheme;
+
+          if (lightDynamic != null && darkDynamic != null) {
+            // Dynamic colors are available. Use them.
+            lightColorScheme = lightDynamic.harmonized();
+            darkColorScheme = darkDynamic.harmonized();
+          } else {
+            // Dynamic colors are not available, use our fallback brand colors.
+            lightColorScheme = ColorScheme.fromSeed(
+              seedColor: const Color(0xFF00E676),
+              brightness: Brightness.light,
+            );
+            darkColorScheme = ColorScheme.fromSeed(
+              seedColor: const Color(0xFF00E676),
+              brightness: Brightness.dark,
+            );
+          }
+
+          return MaterialApp(
+            navigatorKey: GlobalMascotManager.navigatorKey,
+            debugShowCheckedModeBanner: false,
+            theme: LiquidMaterialTheme.createLightTheme(lightColorScheme),
+            darkTheme: LiquidMaterialTheme.createDarkTheme(darkColorScheme),
+            themeMode:
+                ThemeMode.dark, // Defaulting to dark mode for our aesthetic
+            home: const AppWithFloatingAI(child: AuthGate()),
+            builder: (context, child) {
+              return AppWithFloatingAI(
+                child: child!,
+                showFloatingAI: _shouldShowFloatingAI(context),
+              );
+            },
           );
         },
       ),

@@ -1130,9 +1130,4 @@ class _ModernTradeScreenState extends State<ModernTradeScreen>
       ),
     );
   }
-
-  void _showMascotPopup(MascotTrigger trigger) {
-    // Use the global mascot popup system
-    GlobalMascotManager.showMascotPopup(trigger);
-  }
 }

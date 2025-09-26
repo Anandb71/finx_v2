@@ -24,7 +24,7 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
   final Map<String, StreamSubscription> _stockSubscriptions = {};
 
   // Performance tracking
-  double _totalValue = 0.0;
+  double _totalValue = 100000.0; // Start with $100K virtual currency
   double _totalGain = 0.0;
   double _totalGainPercent = 0.0;
   double _dayGain = 0.0;
@@ -42,6 +42,12 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
   double get dayGain => _dayGain;
   double get dayGainPercent => _dayGainPercent;
 
+  int get userLevel {
+    // Example logic: Level up every $5,000 in portfolio value
+    if (totalValue < 5000) return 1;
+    return (totalValue / 5000).floor() + 1;
+  }
+
   /// Initialize real-time data updates
   void initializeRealTimeData() {
     // Start periodic updates
@@ -54,6 +60,9 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     for (final symbol in _holdings.keys) {
       _subscribeToStock(symbol);
     }
+
+    // Load popular market stocks
+    _loadMarketMovers();
 
     _updateAllData();
   }
@@ -83,10 +92,40 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     _currentStockData.remove(symbol);
   }
 
+  /// Load popular market movers
+  Future<void> _loadMarketMovers() async {
+    final popularSymbols = [
+      'AAPL',
+      'GOOGL',
+      'MSFT',
+      'TSLA',
+      'AMZN',
+      'META',
+      'NVDA',
+      'NFLX',
+    ];
+
+    try {
+      final stockData = await _dataService.getMultipleStocks(popularSymbols);
+
+      for (final entry in stockData.entries) {
+        _currentStockData[entry.key] = entry.value;
+      }
+
+      notifyListeners();
+    } catch (e) {
+      print('Error loading market movers: $e');
+    }
+  }
+
   /// Update all portfolio data
   Future<void> _updateAllData() async {
     final symbols = _holdings.keys.toList();
-    if (symbols.isEmpty) return;
+    if (symbols.isEmpty) {
+      // If no holdings, just update market movers
+      _loadMarketMovers();
+      return;
+    }
 
     try {
       // Batch fetch all stock data
@@ -415,4 +454,3 @@ class Transaction {
 }
 
 enum TransactionType { buy, sell }
-

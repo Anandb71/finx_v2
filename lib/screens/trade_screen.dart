@@ -1,8 +1,17 @@
+// lib/screens/trade_screen.dart
+
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../services/portfolio_provider.dart';
-import '../widgets/sparkline_widget.dart';
+import 'package:animations/animations.dart';
+import '../services/enhanced_portfolio_provider.dart';
+import '../widgets/liquid_card.dart';
+import '../widgets/liquid_sparkline_chart.dart';
+import '../theme/liquid_material_theme.dart';
+
+enum TradeMode { buy, sell }
 
 class TradeScreen extends StatefulWidget {
   final Map<String, dynamic> stockData;
@@ -15,108 +24,141 @@ class TradeScreen extends StatefulWidget {
 
 class _TradeScreenState extends State<TradeScreen>
     with TickerProviderStateMixin {
-  late AnimationController _slideController;
-  late AnimationController _fadeController;
-  late AnimationController _pulseController;
-  late AnimationController _successController;
+  // --- Animation Controllers ---
+  late final AnimationController _fadeController;
+  late final AnimationController _slideController;
+  late final AnimationController _pulseController;
+  late final AnimationController _glowController;
+  late final AnimationController _shimmerController;
 
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _successAnimation;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+  late final Animation<double> _pulseAnimation;
+  late final Animation<double> _glowAnimation;
+  late final Animation<double> _shimmerAnimation;
 
+  // --- State Variables ---
   final TextEditingController _quantityController = TextEditingController();
   bool _isBuyMode = true;
   bool _isTrading = false;
   String? _errorMessage;
+  bool _showConfirmationDialog = false;
+  double _estimatedCost = 0.0;
+  TradeMode _tradeMode = TradeMode.buy;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+    _startAnimations();
+    _setupQuantityListener();
+  }
+
+  void _setupQuantityListener() {
+    _quantityController.addListener(() {
+      _updateEstimatedCost();
+    });
+  }
+
+  void _updateEstimatedCost() {
+    final quantity = int.tryParse(_quantityController.text) ?? 0;
+    final price = _currentPrice;
+    setState(() {
+      _estimatedCost = (quantity * price).toDouble();
+    });
   }
 
   void _initializeAnimations() {
-    _slideController = AnimationController(
+    _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _pulseController = AnimationController(
+    _slideController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    _successController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _shimmerController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
 
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
           CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
         );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
-    );
-
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-
-    _successAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _successController, curve: Curves.elasticOut),
+    _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
+    _shimmerAnimation = Tween<double>(begin: -1.0, end: 1.0).animate(
+      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
+    );
+  }
 
-    _slideController.forward();
+  void _startAnimations() {
     _fadeController.forward();
+    _slideController.forward();
     _pulseController.repeat(reverse: true);
+    _glowController.repeat(reverse: true);
+    _shimmerController.repeat();
   }
 
   @override
   void dispose() {
-    _slideController.dispose();
     _fadeController.dispose();
+    _slideController.dispose();
     _pulseController.dispose();
-    _successController.dispose();
+    _glowController.dispose();
+    _shimmerController.dispose();
     _quantityController.dispose();
     super.dispose();
   }
 
   double get _currentPrice {
-    if (!mounted) return 248.50; // Default Tesla price
-    final portfolio = context.read<PortfolioProvider>();
-    final price = portfolio.currentPrices['TSLA'];
-    if (price != null) {
-      return price;
+    final portfolio = context.read<EnhancedPortfolioProvider>();
+    final symbol = _stockSymbol;
+    final stockData = portfolio.getStockData(symbol);
+    if (stockData != null) {
+      return stockData.currentPrice;
     }
-    return 248.50; // Default Tesla price
+    return widget.stockData['price']?.toDouble() ??
+        widget.stockData['currentPrice']?.toDouble() ??
+        248.50;
   }
 
-  int get _currentHolding {
-    if (!mounted) return 0;
-    final portfolio = context.read<PortfolioProvider>();
-    return portfolio.getStockQuantity('TSLA');
-  }
+  String get _stockSymbol => widget.stockData['symbol'] ?? 'AAPL';
+  String get _stockName => widget.stockData['name'] ?? 'Apple Inc.';
 
-  double get _currentHoldingValue {
-    if (!mounted) return 0.0;
-    final portfolio = context.read<PortfolioProvider>();
-    return portfolio.getStockValue('TSLA');
+  List<double> _generateSamplePriceData() {
+    final random = DateTime.now().millisecondsSinceEpoch % 1000;
+    final basePrice = _currentPrice;
+    final data = <double>[];
+
+    for (int i = 0; i < 30; i++) {
+      final variation = (random + i) % 20 - 10;
+      final price = basePrice + variation + (i * 0.5);
+      data.add(price);
+    }
+    return data;
   }
 
   Future<void> _executeTrade() async {
-    print(
-      'Execute trade called - isBuyMode: $_isBuyMode, quantity: ${_quantityController.text}',
-    );
-    if (!mounted) return;
-
     if (_quantityController.text.isEmpty) {
       setState(() {
-        _errorMessage = 'Please enter quantity';
+        _errorMessage = 'Please enter a quantity';
       });
       return;
     }
@@ -124,9 +166,29 @@ class _TradeScreenState extends State<TradeScreen>
     final quantity = int.tryParse(_quantityController.text);
     if (quantity == null || quantity <= 0) {
       setState(() {
-        _errorMessage = 'Please enter valid quantity';
+        _errorMessage = 'Please enter a valid quantity';
       });
       return;
+    }
+
+    final portfolio = context.read<EnhancedPortfolioProvider>();
+
+    if (_tradeMode == TradeMode.buy) {
+      if (portfolio.virtualCash < _estimatedCost) {
+        setState(() {
+          _errorMessage = 'Insufficient funds';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Insufficient funds. You need \$${_estimatedCost.toStringAsFixed(2)} but only have \$${portfolio.virtualCash.toStringAsFixed(2)}',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -134,24 +196,28 @@ class _TradeScreenState extends State<TradeScreen>
       _errorMessage = null;
     });
 
-    if (!mounted) return;
+    await Future.delayed(const Duration(seconds: 2));
 
-    final portfolio = context.read<PortfolioProvider>();
-    final success = await portfolio.executeTrade(
-      symbol: 'TSLA',
-      quantity: quantity,
-      price: _currentPrice,
-      type: _isBuyMode ? TransactionType.buy : TransactionType.sell,
-    );
+    if (mounted) {
+      final success = await portfolio.executeTrade(
+        symbol: _stockSymbol,
+        quantity: quantity,
+        type: _tradeMode == TradeMode.buy
+            ? TransactionType.buy
+            : TransactionType.sell,
+      );
 
-    if (!mounted) return;
+      setState(() {
+        _isTrading = false;
+      });
 
-    if (success) {
-      _successController.forward();
-      _quantityController.clear();
+      if (success) {
+        _quantityController.clear();
+        setState(() {
+          _estimatedCost = 0.0;
+        });
+        HapticFeedback.heavyImpact();
 
-      // Show success message
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -159,478 +225,381 @@ class _TradeScreenState extends State<TradeScreen>
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
-                  _isBuyMode
+                  _tradeMode == TradeMode.buy
                       ? 'Successfully bought $quantity shares!'
                       : 'Successfully sold $quantity shares!',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
-            backgroundColor: const Color(0xFF00FFA3),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
         );
-      }
-    } else {
-      if (mounted) {
+
+        Navigator.pop(context);
+      } else {
         setState(() {
-          _errorMessage = _isBuyMode
-              ? 'Insufficient funds'
-              : 'Insufficient shares';
+          _errorMessage = _tradeMode == TradeMode.buy
+              ? 'Insufficient funds for this trade'
+              : 'You do not own enough shares to sell';
         });
       }
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _isTrading = false;
-      });
-    }
+  void _showTradeConfirmation() {
+    setState(() {
+      _showConfirmationDialog = true;
+    });
+  }
+
+  void _hideTradeConfirmation() {
+    setState(() {
+      _showConfirmationDialog = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!mounted) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Theme.of(context).scaffoldBackgroundColor,
-              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
-              Theme.of(context).scaffoldBackgroundColor.withOpacity(0.6),
-            ],
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).colorScheme.background,
+                  Theme.of(context).colorScheme.background.withOpacity(0.8),
+                ],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
+          FadeTransition(
             opacity: _fadeAnimation,
             child: SlideTransition(
               position: _slideAnimation,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 20),
-                    _buildStockHeader(),
-                    const SizedBox(height: 15),
-                    _buildPriceCard(),
-                    const SizedBox(height: 15),
-                    _buildPositionCard(),
-                    const SizedBox(height: 15),
-                    _buildTradingInterface(),
-                    const SizedBox(height: 15),
-                    _buildRecentTransactions(),
-                  ],
-                ),
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  _buildLiquidAppBar(),
+                  _buildHeroStockCard(),
+                  _buildTradingControlsCard(),
+                  _buildPositionCard(),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Text(
-          'Trade',
-          style: GoogleFonts.inter(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStockHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF00FFA3).withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            spreadRadius: 0,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Tesla Inc.',
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            'TSLA',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.white.withOpacity(0.7),
-            ),
-          ),
+          if (_showConfirmationDialog) _buildConfirmationDialog(),
         ],
       ),
     );
   }
 
-  Widget _buildPriceCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            spreadRadius: 0,
-            offset: const Offset(0, 6),
+  Widget _buildLiquidAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Theme.of(context).colorScheme.background.withOpacity(0.9),
+                Theme.of(context).colorScheme.background.withOpacity(0.7),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Current Price',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(0.8),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
               ),
-              const Spacer(),
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00FFA3).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'LIVE',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF00FFA3),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surface.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            size: 20,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '\$${_currentPrice.toStringAsFixed(2)}',
-            style: GoogleFonts.inter(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF00FFA3),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Price Chart',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withOpacity(0.8),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: SparklineWidget(
-                prices: [
-                  240,
-                  245,
-                  250,
-                  248,
-                  252,
-                  248,
-                  250,
-                  255,
-                  260,
-                  258,
-                  262,
-                  265,
-                  268,
-                  270,
-                  275,
-                  280,
-                  285,
-                  290,
-                  295,
-                  300,
-                ],
-                lineColor: Color(0xFF00FFA3),
-                height: 180,
-                width: 300,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPositionCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            spreadRadius: 0,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Your Position',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildPositionItem(
-                  'Available Cash',
-                  '\$${context.watch<PortfolioProvider>().virtualCash.toStringAsFixed(2)}',
-                  Icons.account_balance_wallet,
-                  const Color(0xFF00FFA3),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildPositionItem(
-                  'TSLA Shares',
-                  '${_currentHolding}',
-                  Icons.trending_up,
-                  Colors.blue,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildPositionItem(
-            'TSLA Value',
-            '\$${_currentHoldingValue.toStringAsFixed(2)}',
-            Icons.analytics,
-            Colors.purple,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPositionItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.7),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTradingInterface() {
-    print('Building trading interface');
-    return Container(
-      padding: const EdgeInsets.all(20), // Increased padding
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08), // Slightly more visible
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ), // More visible border
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up, color: const Color(0xFF00FFA3), size: 24),
-              const SizedBox(width: 12),
-              Text(
-                'Trading Interface',
-                style: GoogleFonts.inter(
-                  fontSize: 20, // Increased font size
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20), // Increased spacing
-          _buildBuySellToggle(),
-          const SizedBox(height: 20), // Increased spacing
-          _buildQuantityInput(),
-          const SizedBox(height: 20), // Increased spacing
-          _buildEstimatedCost(),
-          const SizedBox(height: 20), // Increased spacing
-          _buildTradeButton(),
-          if (_errorMessage != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.red.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error, color: Colors.red, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _stockSymbol,
+                              style: GoogleFonts.manrope(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              _stockName,
+                              style: GoogleFonts.manrope(
+                                fontSize: 14,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      AnimatedBuilder(
+                        animation: _pulseAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _pulseAnimation.value,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                'LIVE',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroStockCard() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: LiquidCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _stockSymbol,
+                          style: GoogleFonts.manrope(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          _stockName,
+                          style: GoogleFonts.manrope(
+                            fontSize: 16,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '\$${_currentPrice.toStringAsFixed(2)}',
+                        style: GoogleFonts.manrope(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          '+2.5% Today',
+                          style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ],
-        ],
+              const SizedBox(height: 24),
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+                ),
+                child: LiquidSparklineChart(
+                  data: _generateSamplePriceData(),
+                  height: 200,
+                  lineColor: Theme.of(context).colorScheme.primary,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withOpacity(0.2),
+                  strokeWidth: 3,
+                  showLiveIndicator: true,
+                  glowAnimationValue: _glowAnimation.value,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTradingControlsCard() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: LiquidCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Trading Controls',
+                style: GoogleFonts.manrope(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildBuySellToggle(),
+              const SizedBox(height: 24),
+              _buildQuantityInput(),
+              const SizedBox(height: 24),
+              _buildTradeSummary(),
+              const SizedBox(height: 24),
+              _buildExecuteButton(),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.error.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Theme.of(context).colorScheme.error,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildBuySellToggle() {
-    print('Building buy/sell toggle - isBuyMode: $_isBuyMode');
     return Container(
-      padding: const EdgeInsets.all(8), // Even more padding
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15), // Much more visible background
-        borderRadius: BorderRadius.circular(20), // Even bigger border radius
-        border: Border.all(
-          color: const Color(0xFF00FFA3).withOpacity(0.5),
-          width: 2,
-        ), // Bright border
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00FFA3).withOpacity(0.2),
-            blurRadius: 15,
-            spreadRadius: 0,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
       ),
       child: Row(
         children: [
@@ -639,46 +608,31 @@ class _TradeScreenState extends State<TradeScreen>
               onTap: () {
                 setState(() {
                   _isBuyMode = true;
+                  _tradeMode = TradeMode.buy;
                   _errorMessage = null;
                 });
+                HapticFeedback.lightImpact();
               },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 20,
-                  horizontal: 12,
-                ), // Even more padding
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color: _isBuyMode
-                      ? const Color(0xFF00FFA3)
-                      : Colors.white.withOpacity(
-                          0.1,
-                        ), // Always visible background
-                  borderRadius: BorderRadius.circular(
-                    16,
-                  ), // Bigger border radius
-                  border: Border.all(
-                    color: _isBuyMode
-                        ? const Color(0xFF00FFA3)
-                        : Colors.white.withOpacity(0.3),
-                    width: 2,
-                  ),
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: _isBuyMode
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF00FFA3).withOpacity(0.6),
-                            blurRadius: 15,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 20,
                             spreadRadius: 0,
-                            offset: const Offset(0, 6),
+                            offset: const Offset(0, 4),
                           ),
                         ]
-                      : [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.1),
-                            blurRadius: 8,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                      : null,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -687,19 +641,22 @@ class _TradeScreenState extends State<TradeScreen>
                       Icons.trending_up,
                       color: _isBuyMode
                           ? Colors.white
-                          : Colors.white.withOpacity(0.8),
-                      size: 22, // Bigger icon
+                          : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
+                      size: 20,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Text(
                       'BUY',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 22, // Much bigger font size
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: _isBuyMode
                             ? Colors.white
-                            : Colors.white.withOpacity(0.8),
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -707,52 +664,36 @@ class _TradeScreenState extends State<TradeScreen>
               ),
             ),
           ),
-          const SizedBox(width: 12), // Increased spacing
           Expanded(
             child: GestureDetector(
               onTap: () {
                 setState(() {
                   _isBuyMode = false;
+                  _tradeMode = TradeMode.sell;
                   _errorMessage = null;
                 });
+                HapticFeedback.lightImpact();
               },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 20,
-                  horizontal: 12,
-                ), // Even more padding
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color: !_isBuyMode
-                      ? Colors.red
-                      : Colors.white.withOpacity(
-                          0.1,
-                        ), // Always visible background
-                  borderRadius: BorderRadius.circular(
-                    16,
-                  ), // Bigger border radius
-                  border: Border.all(
-                    color: !_isBuyMode
-                        ? Colors.red
-                        : Colors.white.withOpacity(0.3),
-                    width: 2,
-                  ),
+                      ? Theme.of(context).colorScheme.error
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: !_isBuyMode
                       ? [
                           BoxShadow(
-                            color: Colors.red.withOpacity(0.6),
-                            blurRadius: 15,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.error.withOpacity(0.3),
+                            blurRadius: 20,
                             spreadRadius: 0,
-                            offset: const Offset(0, 6),
+                            offset: const Offset(0, 4),
                           ),
                         ]
-                      : [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.1),
-                            blurRadius: 8,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                      : null,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -761,19 +702,22 @@ class _TradeScreenState extends State<TradeScreen>
                       Icons.trending_down,
                       color: !_isBuyMode
                           ? Colors.white
-                          : Colors.white.withOpacity(0.8),
-                      size: 22, // Bigger icon
+                          : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
+                      size: 20,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Text(
                       'SELL',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 22, // Much bigger font size
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: !_isBuyMode
                             ? Colors.white
-                            : Colors.white.withOpacity(0.8),
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -792,29 +736,48 @@ class _TradeScreenState extends State<TradeScreen>
       children: [
         Text(
           'Quantity',
-          style: GoogleFonts.inter(
-            fontSize: 14,
+          style: GoogleFonts.manrope(
+            fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.8),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         TextField(
           controller: _quantityController,
           keyboardType: TextInputType.number,
-          style: GoogleFonts.inter(fontSize: 16, color: Colors.white),
+          style: GoogleFonts.manrope(
+            fontSize: 18,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: 'Enter quantity',
-            hintStyle: GoogleFonts.inter(color: Colors.white.withOpacity(0.5)),
+            hintStyle: GoogleFonts.manrope(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
+            fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.2),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
+              horizontal: 20,
+              vertical: 16,
             ),
           ),
           onChanged: (value) {
@@ -827,233 +790,333 @@ class _TradeScreenState extends State<TradeScreen>
     );
   }
 
-  Widget _buildEstimatedCost() {
-    final quantity = int.tryParse(_quantityController.text) ?? 0;
-    final estimatedCost = quantity * _currentPrice;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.calculate, color: Colors.white.withOpacity(0.7), size: 20),
-          const SizedBox(width: 12),
-          Text(
-            'Estimated Cost: ',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.7),
-            ),
-          ),
-          Text(
-            '\$${estimatedCost.toStringAsFixed(2)}',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF00FFA3),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTradeButton() {
-    print(
-      'Building trade button - isBuyMode: $_isBuyMode, isTrading: $_isTrading',
-    );
-    return Container(
-      width: double.infinity,
-      height: 70, // Even bigger height to make it more prominent
-      margin: const EdgeInsets.only(top: 10), // Add margin for separation
-      child: AnimatedBuilder(
-        animation: _successAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _successAnimation.value,
-            child: ElevatedButton(
-              onPressed: _isTrading ? null : _executeTrade,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isBuyMode
-                    ? const Color(0xFF00FFA3)
-                    : Colors.red,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 20,
-                  horizontal: 24,
-                ), // Much bigger padding
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    16,
-                  ), // Bigger border radius
-                  side: BorderSide(
-                    color: _isBuyMode ? const Color(0xFF00FFA3) : Colors.red,
-                    width: 3, // Thick border
-                  ),
-                ),
-                elevation: 15, // Even higher elevation for more prominence
-                shadowColor: _isBuyMode
-                    ? const Color(0xFF00FFA3).withOpacity(0.8)
-                    : Colors.red.withOpacity(0.8),
-              ),
-              child: _isTrading
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Processing...',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _isBuyMode ? Icons.trending_up : Icons.trending_down,
-                          size: 24,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          _isBuyMode ? 'BUY SHARES' : 'SELL SHARES',
-                          style: GoogleFonts.inter(
-                            fontSize: 24, // Even bigger font
-                            fontWeight: FontWeight.bold,
-                            letterSpacing:
-                                1.2, // Add letter spacing for emphasis
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildRecentTransactions() {
+  Widget _buildTradeSummary() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            spreadRadius: 0,
-            offset: const Offset(0, 6),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Estimated Cost',
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              Text(
+                '\$${_estimatedCost.toStringAsFixed(2)}',
+                style: GoogleFonts.manrope(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Available Cash',
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              Consumer<EnhancedPortfolioProvider>(
+                builder: (context, portfolio, child) {
+                  return Text(
+                    '\$${portfolio.virtualCash.toStringAsFixed(2)}',
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildExecuteButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: _isTrading ? null : _showTradeConfirmation,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isBuyMode
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.error,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 8,
+          shadowColor: _isBuyMode
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.4)
+              : Theme.of(context).colorScheme.error.withOpacity(0.4),
+        ),
+        child: _isTrading
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Processing...',
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _isBuyMode ? Icons.trending_up : Icons.trending_down,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _isBuyMode ? 'EXECUTE BUY' : 'EXECUTE SELL',
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildPositionCard() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: LiquidCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your Position',
+                style: GoogleFonts.manrope(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Consumer<EnhancedPortfolioProvider>(
+                builder: (context, portfolio, child) {
+                  final sharesOwned = portfolio.holdings[_stockSymbol] ?? 0;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _buildPositionItem(
+                          'Available Cash',
+                          '\$${portfolio.virtualCash.toStringAsFixed(2)}',
+                          Icons.account_balance_wallet,
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildPositionItem(
+                          '$_stockSymbol Shares',
+                          sharesOwned.toString(), // FIX: Show real shares
+                          Icons.inventory_2,
+                          Colors.blue,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPositionItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Text(
-            'Recent Transactions',
-            style: GoogleFonts.inter(
+            value,
+            style: GoogleFonts.manrope(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
-          Consumer<PortfolioProvider>(
-            builder: (context, portfolio, child) {
-              final transactions = portfolio.getRecentTransactions(limit: 5);
-              if (transactions.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No transactions yet',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.5),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmationDialog() {
+    return Material(
+      color: Colors.black.withOpacity(0.5),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Confirm Trade',
+                    style: GoogleFonts.manrope(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                );
-              }
-              return Column(
-                children: transactions.map((transaction) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Are you sure you want to ${_tradeMode == TradeMode.buy ? 'buy' : 'sell'} ${_quantityController.text} shares of $_stockSymbol at \$${_currentPrice.toStringAsFixed(2)}?',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          transaction.type == TransactionType.buy
-                              ? Icons.trending_up
-                              : Icons.trending_down,
-                          color: transaction.type == TransactionType.buy
-                              ? const Color(0xFF00FFA3)
-                              : Colors.red,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${transaction.type == TransactionType.buy ? 'Bought' : 'Sold'} ${transaction.quantity} ${transaction.symbol}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'at \$${transaction.price.toStringAsFixed(2)}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  color: Colors.white.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: _hideTradeConfirmation,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.manrope(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.7),
+                            ),
                           ),
                         ),
-                        Text(
-                          '\$${(transaction.quantity * transaction.price).toStringAsFixed(2)}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: transaction.type == TransactionType.buy
-                                ? const Color(0xFF00FFA3)
-                                : Colors.red,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _hideTradeConfirmation();
+                            _executeTrade();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isBuyMode
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.error,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Confirm',
+                            style: GoogleFonts.manrope(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              );
-            },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

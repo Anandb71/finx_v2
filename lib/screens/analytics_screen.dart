@@ -1,9 +1,15 @@
+// lib/screens/analytics_screen.dart
+
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../services/portfolio_provider.dart';
-import '../services/mascot_manager_service.dart';
-import '../services/global_mascot_manager.dart';
+import 'dart:math' as math;
+import '../services/enhanced_portfolio_provider.dart';
+import '../widgets/liquid_card.dart';
+import '../widgets/liquid_sparkline_chart.dart';
+import '../theme/liquid_material_theme.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -14,905 +20,887 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen>
     with TickerProviderStateMixin {
-  String _selectedMetric = 'Portfolio Value';
-  late AnimationController _animationController;
+  // --- Animation Controllers ---
+  late final AnimationController _fadeController;
+  late final AnimationController _slideController;
+  late final AnimationController _staggerController;
+  late final AnimationController _donutController;
+  late final AnimationController _glowController;
 
-  final List<String> _metrics = [
-    'Portfolio Value',
-    'P&L',
-    'Holdings Breakdown',
-    'Trading Activity',
-    'Performance',
-  ];
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+  late final Animation<double> _staggerAnimation;
+  late final Animation<double> _donutAnimation;
+  late final Animation<double> _glowAnimation;
+
+  // --- State Variables ---
+  Offset? _chartHoverPosition;
+  int? _hoveredSegmentIndex;
+  List<Map<String, dynamic>> _topGainers = [];
+  List<Map<String, dynamic>> _topLosers = [];
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _initializeAnimations();
+    _startAnimations();
+
+    // FIX: Fetch initial data here instead of in the build method.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final portfolio = Provider.of<EnhancedPortfolioProvider>(
+        context,
+        listen: false,
+      );
+      _updateTopPerformers(portfolio);
+    });
+  }
+
+  void _initializeAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _staggerController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _donutController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    _glowController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    _animationController.forward();
-
-    // Show mascot popup with context
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      GlobalMascotManager.showMascotPopup(
-        MascotTrigger.analyticsView,
-        context: {
-          'screen': 'Analytics Dashboard',
-          'timestamp': DateTime.now().toIso8601String(),
-        },
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Consumer<PortfolioProvider>(
-        builder: (context, portfolio, child) {
-          return CustomScrollView(
-            slivers: [
-              _buildAppBar(),
-              _buildOverviewCards(portfolio),
-              _buildMetricSelector(),
-              _buildChartSection(portfolio),
-              _buildInsightsSection(portfolio),
-              _buildHoldingsBreakdown(portfolio),
-              _buildTradingStats(portfolio),
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
-          );
-        },
-      ),
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
+    _staggerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _staggerController, curve: Curves.easeOutCubic),
+    );
+    _donutAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _donutController, curve: Curves.easeOutCubic),
+    );
+    _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
   }
 
-  Widget _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).scaffoldBackgroundColor,
-                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
-                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.6),
-              ],
-            ),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                Text(
-                  'Portfolio Analytics',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Real-time insights & performance',
-                  style: GoogleFonts.inter(fontSize: 14, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void _startAnimations() {
+    _fadeController.forward();
+    _slideController.forward();
+    _staggerController.forward();
+    _donutController.forward();
+    _glowController.repeat(reverse: true);
   }
 
-  Widget _buildOverviewCards(PortfolioProvider portfolio) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _buildOverviewCard(
-                    'Total Value',
-                    '\$${portfolio.totalPortfolioValue.toStringAsFixed(0)}',
-                    portfolio.totalGainLossPercentage >= 0
-                        ? Colors.green
-                        : Colors.red,
-                    portfolio.totalGainLossPercentage >= 0 ? '+' : '',
-                    '${portfolio.totalGainLossPercentage.toStringAsFixed(2)}%',
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildOverviewCard(
-                    'Cash Available',
-                    '\$${portfolio.virtualCash.toStringAsFixed(0)}',
-                    Colors.blue,
-                    '',
-                    '${((portfolio.virtualCash / portfolio.totalPortfolioValue) * 100).toStringAsFixed(1)}%',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildOverviewCard(
-                    'Total Trades',
-                    '${portfolio.totalTrades}',
-                    Colors.orange,
-                    '',
-                    '${portfolio.holdings.length} holdings',
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildOverviewCard(
-                    'Best Performer',
-                    _getBestPerformer(portfolio),
-                    Colors.green,
-                    '',
-                    _getBestPerformerChange(portfolio),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverviewCard(
-    String title,
-    String value,
-    Color color,
-    String prefix,
-    String subtitle,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Colors.white70,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '$prefix$value',
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: GoogleFonts.inter(fontSize: 11, color: Colors.white60),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricSelector() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Container(
-          height: 50,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            itemCount: _metrics.length,
-            itemBuilder: (context, index) {
-              final metric = _metrics[index];
-              final isSelected = _selectedMetric == metric;
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedMetric = metric;
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF00FFA3)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Center(
-                      child: Text(
-                        metric,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.black : Colors.white70,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChartSection(PortfolioProvider portfolio) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          height: 300,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _selectedMetric,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(child: _buildChart(portfolio)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChart(PortfolioProvider portfolio) {
-    final data = _getChartData(portfolio);
-
-    if (data.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.analytics_outlined,
-              size: 48,
-              color: Colors.white.withOpacity(0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No data available yet',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Colors.white.withOpacity(0.5),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start trading to see your analytics',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.3),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return CustomPaint(
-      size: const Size(double.infinity, double.infinity),
-      painter: _ChartPainter(data, _selectedMetric),
-    );
-  }
-
-  Map<String, List<double>> _getChartData(PortfolioProvider portfolio) {
-    switch (_selectedMetric) {
-      case 'Portfolio Value':
-        final history = portfolio.portfolioValueHistory;
-        if (history.isEmpty) return {};
-        return {'Portfolio': history.map((point) => point.value).toList()};
-      case 'P&L':
-        final history = portfolio.portfolioValueHistory;
-        if (history.isEmpty) return {};
-        return {'P&L': history.map((point) => point.value - 100000.0).toList()};
-      case 'Holdings Breakdown':
-        return _getHoldingsBreakdownData(portfolio);
-      case 'Trading Activity':
-        return _getTradingActivityData(portfolio);
-      case 'Performance':
-        return _getPerformanceData(portfolio);
-      default:
-        return {};
-    }
-  }
-
-  Map<String, List<double>> _getHoldingsBreakdownData(
-    PortfolioProvider portfolio,
-  ) {
+  void _updateTopPerformers(EnhancedPortfolioProvider portfolio) {
     final holdings = portfolio.holdings;
-    final currentPrices = portfolio.currentPrices;
+    final stockData = portfolio.currentStockData;
 
-    Map<String, List<double>> data = {};
+    final holdingsWithData = holdings.entries
+        .map((entry) {
+          final symbol = entry.key;
+          final quantity = entry.value;
+          final stock = stockData[symbol];
 
-    for (final symbol in holdings.keys) {
-      final currentPrice = currentPrices[symbol] ?? 0.0;
-      final value = (holdings[symbol] ?? 0) * currentPrice;
+          if (stock != null) {
+            return {
+              'symbol': symbol,
+              'quantity': quantity,
+              'currentPrice': stock.currentPrice,
+              'change': stock.change,
+              'changePercent': stock.changePercent,
+              'price': stock.currentPrice,
+              'value': quantity * stock.currentPrice,
+              'data': _generatePriceData(
+                stock.currentPrice,
+                stock.changePercent > 0,
+              ),
+            };
+          }
+          return null;
+        })
+        .where((item) => item != null)
+        .cast<Map<String, dynamic>>()
+        .toList();
 
-      if (value > 0) {
-        data[symbol] = [value];
-      }
+    holdingsWithData.sort(
+      (a, b) => (b['changePercent'] as double).compareTo(
+        a['changePercent'] as double,
+      ),
+    );
+
+    if (mounted) {
+      setState(() {
+        _topGainers = holdingsWithData
+            .where((item) => (item['changePercent'] as double) > 0)
+            .take(3)
+            .toList();
+        _topLosers = holdingsWithData
+            .where((item) => (item['changePercent'] as double) < 0)
+            .take(3)
+            .toList();
+      });
+    }
+  }
+
+  List<double> _generatePriceData(double basePrice, bool isGain) {
+    final random = math.Random();
+    final data = <double>[];
+    double currentPrice = basePrice;
+
+    for (int i = 0; i < 20; i++) {
+      final variation = (random.nextDouble() - 0.5) * (isGain ? 2 : -2);
+      currentPrice += variation;
+      data.add(currentPrice);
+    }
+    return data;
+  }
+
+  List<double> _generatePortfolioHistory(EnhancedPortfolioProvider portfolio) {
+    // Generate sample data based on current portfolio value
+    final currentValue = portfolio.totalValue;
+    final List<double> data = [];
+    final double baseValue = currentValue * 0.95;
+
+    for (int i = 0; i < 30; i++) {
+      final double variation = (i / 30.0) * (currentValue - baseValue);
+      final double randomFactor = (i % 3 == 0) ? 0.02 : -0.01;
+      final double value =
+          baseValue + variation + (currentValue * randomFactor);
+      data.add(value);
+    }
+
+    if (data.isNotEmpty) {
+      data[data.length - 1] = currentValue;
     }
 
     return data;
   }
 
-  Map<String, List<double>> _getTradingActivityData(
-    PortfolioProvider portfolio,
+  List<Map<String, dynamic>> _getAssetAllocation(
+    EnhancedPortfolioProvider portfolio,
   ) {
-    final transactions = portfolio.transactionHistory;
+    final holdings = portfolio.holdings;
+    final stockData = portfolio.currentStockData;
+    final totalValue = portfolio.totalValue;
 
-    if (transactions.isEmpty) return {};
-
-    // Group transactions by day
-    Map<String, int> tradesPerDay = {};
-    for (final transaction in transactions) {
-      final day = transaction.timestamp.toIso8601String().substring(0, 10);
-      tradesPerDay[day] = (tradesPerDay[day] ?? 0) + 1;
+    if (totalValue == 0 || holdings.isEmpty) {
+      return [
+        {'name': 'Cash', 'percentage': 100.0, 'color': const Color(0xFF9C27B0)},
+      ];
     }
 
-    return {
-      'Trades': tradesPerDay.values.map((count) => count.toDouble()).toList(),
-    };
-  }
+    final allocation = <Map<String, dynamic>>[];
+    final colors = [
+      const Color(0xFF00E676),
+      const Color(0xFF2196F3),
+      const Color(0xFFFF9800),
+      const Color(0xFFE91E63),
+      const Color(0xFF9C27B0),
+      const Color(0xFF4CAF50),
+      const Color(0xFFFF5722),
+      const Color(0xFF3F51B5),
+    ];
 
-  Map<String, List<double>> _getPerformanceData(PortfolioProvider portfolio) {
-    final history = portfolio.portfolioValueHistory;
+    int colorIndex = 0;
+    holdings.forEach((symbol, quantity) {
+      final stock = stockData[symbol];
+      if (stock != null) {
+        final value = quantity * stock.currentPrice;
+        final percentage = (value / totalValue) * 100;
+        allocation.add({
+          'name': symbol,
+          'percentage': percentage,
+          'color': colors[colorIndex % colors.length],
+        });
+        colorIndex++;
+      }
+    });
 
-    if (history.length < 2) return {};
-
-    List<double> dailyReturns = [];
-    for (int i = 1; i < history.length; i++) {
-      final returnPercent =
-          ((history[i].value - history[i - 1].value) / history[i - 1].value) *
-          100;
-      dailyReturns.add(returnPercent);
+    final cashPercentage = (portfolio.virtualCash / totalValue) * 100;
+    if (cashPercentage > 0.1) {
+      allocation.add({
+        'name': 'Cash',
+        'percentage': cashPercentage,
+        'color': const Color(0xFF9C27B0),
+      });
     }
 
-    return {'Daily Returns %': dailyReturns};
+    return allocation;
   }
 
-  Widget _buildInsightsSection(PortfolioProvider portfolio) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    _staggerController.dispose();
+    _donutController.dispose();
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<EnhancedPortfolioProvider>(
+      builder: (context, portfolio, child) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
             children: [
-              Text(
-                'Key Insights',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).colorScheme.background,
+                      Theme.of(context).colorScheme.background.withOpacity(0.8),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              _buildInsightItem(
-                'Portfolio Diversification',
-                '${portfolio.holdings.length} different stocks',
-                portfolio.holdings.length >= 3 ? Colors.green : Colors.orange,
-                portfolio.holdings.length >= 3
-                    ? 'Well diversified!'
-                    : 'Consider diversifying more',
-              ),
-              _buildInsightItem(
-                'Cash Allocation',
-                '${((portfolio.virtualCash / portfolio.totalPortfolioValue) * 100).toStringAsFixed(1)}% in cash',
-                portfolio.virtualCash / portfolio.totalPortfolioValue > 0.2
-                    ? Colors.blue
-                    : Colors.orange,
-                portfolio.virtualCash / portfolio.totalPortfolioValue > 0.2
-                    ? 'Good cash reserve'
-                    : 'Consider investing more',
-              ),
-              _buildInsightItem(
-                'Trading Activity',
-                '${portfolio.totalTrades} total trades',
-                portfolio.totalTrades > 0 ? Colors.green : Colors.grey,
-                portfolio.totalTrades > 0
-                    ? 'Active trader!'
-                    : 'Start trading to see activity',
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      _buildLiquidAppBar(),
+                      _buildPortfolioHistoryCard(portfolio),
+                      _buildAssetAllocationCard(portfolio),
+                      _buildTopPerformersCard(),
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                    ],
+                  ),
+                ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLiquidAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Theme.of(context).colorScheme.background.withOpacity(0.9),
+                Theme.of(context).colorScheme.background.withOpacity(0.7),
+              ],
+            ),
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surface.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Analytics',
+                              style: GoogleFonts.manrope(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              'Portfolio Performance',
+                              style: GoogleFonts.manrope(
+                                fontSize: 14,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AnimatedBuilder(
+                        animation: _glowAnimation,
+                        builder: (context, child) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context).colorScheme.primary
+                                      .withOpacity(_glowAnimation.value * 0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 0),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              'LIVE',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildInsightItem(
+  Widget _buildPortfolioHistoryCard(EnhancedPortfolioProvider portfolio) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: AnimatedBuilder(
+          animation: _staggerAnimation,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, 50 * (1 - _staggerAnimation.value)),
+              child: Opacity(
+                opacity: _staggerAnimation.value,
+                child: LiquidCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Portfolio History',
+                            style: GoogleFonts.manrope(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const Spacer(),
+                          Consumer<EnhancedPortfolioProvider>(
+                            builder: (context, portfolio, child) {
+                              return Text(
+                                '\$${portfolio.totalValue.toStringAsFixed(2)}',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        height: 300,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surface.withOpacity(0.1),
+                        ),
+                        child: GestureDetector(
+                          onPanUpdate: (details) {
+                            setState(() {
+                              _chartHoverPosition = details.localPosition;
+                            });
+                          },
+                          onPanEnd: (details) {
+                            setState(() {
+                              _chartHoverPosition = null;
+                            });
+                          },
+                          child: Stack(
+                            children: [
+                              LiquidSparklineChart(
+                                data: _generatePortfolioHistory(portfolio),
+                                height: 300,
+                                lineColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                                fillColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.2),
+                                strokeWidth: 3,
+                                showLiveIndicator: true,
+                                glowAnimationValue: _glowAnimation.value,
+                              ),
+                              if (_chartHoverPosition != null)
+                                Positioned(
+                                  left: _chartHoverPosition!.dx - 50,
+                                  top: _chartHoverPosition!.dy - 30,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.surface.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.2),
+                                        width: 1,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 20,
+                                          spreadRadius: 0,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      'Value: \$${(_generatePortfolioHistory(portfolio).last).toStringAsFixed(2)}',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssetAllocationCard(EnhancedPortfolioProvider portfolio) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: AnimatedBuilder(
+          animation: _staggerAnimation,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, 50 * (1 - _staggerAnimation.value)),
+              child: Opacity(
+                opacity: _staggerAnimation.value,
+                child: LiquidCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Asset Allocation',
+                        style: GoogleFonts.manrope(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 250,
+                        child: AnimatedBuilder(
+                          animation: _donutAnimation,
+                          builder: (context, child) {
+                            return CustomPaint(
+                              painter: DonutChartPainter(
+                                data: _getAssetAllocation(portfolio),
+                                animationValue: _donutAnimation.value,
+                                hoveredIndex: _hoveredSegmentIndex,
+                                glowValue: _glowAnimation.value,
+                              ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Total',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
+                                      ),
+                                    ),
+                                    Consumer<EnhancedPortfolioProvider>(
+                                      builder: (context, portfolio, child) {
+                                        return Text(
+                                          '\$${portfolio.totalValue.toStringAsFixed(0)}',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildLegend(portfolio),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegend(EnhancedPortfolioProvider portfolio) {
+    return Column(
+      children: _getAssetAllocation(portfolio).asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        final isHovered = _hoveredSegmentIndex == index;
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _hoveredSegmentIndex = _hoveredSegmentIndex == index
+                  ? null
+                  : index;
+            });
+            HapticFeedback.lightImpact();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isHovered
+                  ? item['color'].withOpacity(0.2)
+                  : Theme.of(context).colorScheme.surface.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isHovered
+                    ? item['color']
+                    : Colors.white.withOpacity(0.2),
+                width: isHovered ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: item['color'],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item['name'],
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${item['percentage'].toStringAsFixed(1)}%',
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: item['color'],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTopPerformersCard() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: AnimatedBuilder(
+          animation: _staggerAnimation,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, 50 * (1 - _staggerAnimation.value)),
+              child: Opacity(
+                opacity: _staggerAnimation.value,
+                child: LiquidCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Daily Movers',
+                        style: GoogleFonts.manrope(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildMoversSection('Top Gainers', _topGainers, true),
+                      const SizedBox(height: 20),
+                      _buildMoversSection('Top Losers', _topLosers, false),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoversSection(
     String title,
-    String value,
-    Color color,
-    String description,
+    List<Map<String, dynamic>> data,
+    bool isGainers,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.manrope(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...data.map((item) => _buildMoverItem(item, isGainers)).toList(),
+      ],
+    );
+  }
+
+  Widget _buildMoverItem(Map<String, dynamic> item, bool isGainers) {
+    final change = item['changePercent'] as double;
+    final color = isGainers
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.error;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+      ),
       child: Row(
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                  item['symbol'],
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
-                  value,
-                  style: GoogleFonts.inter(fontSize: 12, color: color),
-                ),
-                Text(
-                  description,
-                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white60),
+                  '\$${item['price'].toStringAsFixed(2)}',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHoldingsBreakdown(PortfolioProvider portfolio) {
-    final holdings = portfolio.holdings;
-    final currentPrices = portfolio.currentPrices;
-
-    if (holdings.isEmpty) {
-      return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Container(
-            padding: const EdgeInsets.all(24),
+          SizedBox(
+            width: 80,
+            height: 40,
+            child: LiquidSparklineChart(
+              data: item['data'],
+              height: 40,
+              lineColor: color,
+              fillColor: color.withOpacity(0.2),
+              strokeWidth: 2,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: color, width: 1),
             ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 48,
-                    color: Colors.white.withOpacity(0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Holdings Yet',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Start trading to build your portfolio',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.white60,
-                    ),
-                  ),
-                ],
+            child: Text(
+              '${change > 0 ? '+' : ''}${change.toStringAsFixed(1)}%',
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
             ),
-          ),
-        ),
-      );
-    }
-
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Current Holdings',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...holdings.entries.map((entry) {
-                final symbol = entry.key;
-                final quantity = entry.value;
-                final currentPrice = currentPrices[symbol] ?? 0.0;
-                final value = quantity * currentPrice;
-                final purchasePrice =
-                    portfolio.getPurchasePrice(symbol) ?? currentPrice;
-                final gainLoss = (currentPrice - purchasePrice) * quantity;
-                final gainLossPercent = purchasePrice > 0
-                    ? ((currentPrice - purchasePrice) / purchasePrice) * 100
-                    : 0.0;
-
-                return _buildHoldingItem(
-                  symbol,
-                  quantity,
-                  currentPrice,
-                  value,
-                  gainLoss,
-                  gainLossPercent,
-                );
-              }).toList(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHoldingItem(
-    String symbol,
-    int quantity,
-    double currentPrice,
-    double value,
-    double gainLoss,
-    double gainLossPercent,
-  ) {
-    final isPositive = gainLoss >= 0;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F0F0F),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    symbol,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    '$quantity shares @ \$${currentPrice.toStringAsFixed(2)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.white60,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '\$${value.toStringAsFixed(0)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    '${isPositive ? '+' : ''}\$${gainLoss.toStringAsFixed(0)} (${isPositive ? '+' : ''}${gainLossPercent.toStringAsFixed(1)}%)',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: isPositive ? Colors.green : Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTradingStats(PortfolioProvider portfolio) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Trading Statistics',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(
-                      'Total Trades',
-                      '${portfolio.totalTrades}',
-                      Colors.blue,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildStatItem(
-                      'Holdings',
-                      '${portfolio.holdings.length}',
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(
-                      'AI Chats',
-                      '${portfolio.aiChatCount}',
-                      Colors.purple,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildStatItem(
-                      'Level',
-                      '${portfolio.userLevel}',
-                      Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F0F0F),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.white60),
           ),
         ],
       ),
     );
-  }
-
-  String _getBestPerformer(PortfolioProvider portfolio) {
-    final holdings = portfolio.holdings;
-    final currentPrices = portfolio.currentPrices;
-
-    if (holdings.isEmpty) return 'N/A';
-
-    String bestSymbol = '';
-    double bestGain = double.negativeInfinity;
-
-    for (final entry in holdings.entries) {
-      final symbol = entry.key;
-      final quantity = entry.value;
-      final currentPrice = currentPrices[symbol] ?? 0.0;
-      final purchasePrice = portfolio.getPurchasePrice(symbol) ?? currentPrice;
-
-      if (purchasePrice > 0) {
-        final gain = ((currentPrice - purchasePrice) / purchasePrice) * 100;
-        if (gain > bestGain) {
-          bestGain = gain;
-          bestSymbol = symbol;
-        }
-      }
-    }
-
-    return bestSymbol.isEmpty ? 'N/A' : bestSymbol;
-  }
-
-  String _getBestPerformerChange(PortfolioProvider portfolio) {
-    final holdings = portfolio.holdings;
-    final currentPrices = portfolio.currentPrices;
-
-    if (holdings.isEmpty) return 'N/A';
-
-    double bestGain = double.negativeInfinity;
-
-    for (final entry in holdings.entries) {
-      final symbol = entry.key;
-      final currentPrice = currentPrices[symbol] ?? 0.0;
-      final purchasePrice = portfolio.getPurchasePrice(symbol) ?? currentPrice;
-
-      if (purchasePrice > 0) {
-        final gain = ((currentPrice - purchasePrice) / purchasePrice) * 100;
-        if (gain > bestGain) {
-          bestGain = gain;
-        }
-      }
-    }
-
-    return bestGain == double.negativeInfinity
-        ? 'N/A'
-        : '${bestGain.toStringAsFixed(1)}%';
   }
 }
 
-class _ChartPainter extends CustomPainter {
-  final Map<String, List<double>> data;
-  final String metric;
+class DonutChartPainter extends CustomPainter {
+  final List<Map<String, dynamic>> data;
+  final double animationValue;
+  final int? hoveredIndex;
+  final double glowValue;
 
-  _ChartPainter(this.data, this.metric);
+  DonutChartPainter({
+    required this.data,
+    required this.animationValue,
+    this.hoveredIndex,
+    required this.glowValue,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.isEmpty) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 20;
+    final innerRadius = radius * 0.6;
 
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+    double startAngle = -math.pi / 2;
 
-    final colors = [
-      const Color(0xFF00FFA3),
-      const Color(0xFF00D4FF),
-      const Color(0xFFFF6B6B),
-      const Color(0xFFFFD93D),
-      const Color(0xFF6BCF7F),
-    ];
+    for (int i = 0; i < data.length; i++) {
+      final item = data[i];
+      final percentage = item['percentage'] as double;
+      final sweepAngle = (percentage / 100) * 2 * math.pi * animationValue;
+      final color = item['color'] as Color;
+      final isHovered = hoveredIndex == i;
 
-    int colorIndex = 0;
-    for (final entry in data.entries) {
-      final values = entry.value;
-      if (values.isEmpty) continue;
+      final paint = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
 
-      paint.color = colors[colorIndex % colors.length];
-
-      final path = Path();
-      final maxValue = values.reduce((a, b) => a > b ? a : b);
-      final minValue = values.reduce((a, b) => a < b ? a : b);
-      final range = maxValue - minValue;
-
-      if (range == 0) {
-        // All values are the same, draw a horizontal line
-        final y = size.height * 0.5;
-        path.moveTo(0, y);
-        path.lineTo(size.width, y);
-      } else {
-        for (int i = 0; i < values.length; i++) {
-          final x = (i / (values.length - 1)) * size.width;
-          final y =
-              size.height - ((values[i] - minValue) / range) * size.height;
-
-          if (i == 0) {
-            path.moveTo(x, y);
-          } else {
-            path.lineTo(x, y);
-          }
-        }
+      if (isHovered) {
+        paint.maskFilter = MaskFilter.blur(BlurStyle.normal, 10);
       }
 
-      canvas.drawPath(path, paint);
-      colorIndex++;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        true,
+        paint,
+      );
+
+      // Inner circle to create donut effect
+      canvas.drawCircle(
+        center,
+        innerRadius,
+        Paint()
+          ..color = const Color(0xFF0F0F23)
+          ..style = PaintingStyle.fill,
+      );
+
+      startAngle += sweepAngle;
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return oldDelegate is DonutChartPainter &&
+        (oldDelegate.data != data ||
+            oldDelegate.animationValue != animationValue ||
+            oldDelegate.hoveredIndex != hoveredIndex ||
+            oldDelegate.glowValue != glowValue);
+  }
 }

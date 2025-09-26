@@ -1,8 +1,11 @@
+// lib/screens/portfolio_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../services/portfolio_provider.dart';
-import 'modern_trade_screen.dart';
+import '../services/enhanced_portfolio_provider.dart'; // FIX: Use the correct provider
+import 'trade_screen.dart';
+import 'dart:math' as math;
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({super.key});
@@ -60,7 +63,8 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
-      body: Consumer<PortfolioProvider>(
+      body: Consumer<EnhancedPortfolioProvider>(
+        // FIX: Use the correct provider
         builder: (context, portfolio, child) {
           return CustomScrollView(
             slivers: [
@@ -118,10 +122,11 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildPortfolioOverview(PortfolioProvider portfolio) {
-    final totalValue = portfolio.totalPortfolioValue;
-    final gainLoss = portfolio.totalGainLoss;
-    final gainLossPercent = portfolio.totalGainLossPercentage;
+  Widget _buildPortfolioOverview(EnhancedPortfolioProvider portfolio) {
+    // FIX: Use the correct provider
+    final totalValue = portfolio.totalValue;
+    final gainLoss = portfolio.dayGain;
+    final gainLossPercent = portfolio.dayGainPercent;
     final cash = portfolio.virtualCash;
     final stocksValue = totalValue - cash;
 
@@ -134,7 +139,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
             position: _slideAnimation,
             child: Column(
               children: [
-                // Main Portfolio Value Card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -172,7 +176,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '\$${totalValue.toStringAsFixed(0)}',
+                        '\$${totalValue.toStringAsFixed(2)}',
                         style: GoogleFonts.orbitron(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
@@ -192,7 +196,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.abs().toStringAsFixed(0)} (${gainLoss >= 0 ? '+' : ''}${gainLossPercent.toStringAsFixed(2)}%)',
+                            '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.abs().toStringAsFixed(2)} (${gainLoss >= 0 ? '+' : ''}${gainLossPercent.toStringAsFixed(2)}%)',
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -205,32 +209,34 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Cash vs Stocks Breakdown
                 Row(
                   children: [
                     Expanded(
                       child: _buildBreakdownCard(
                         'Cash',
-                        '\$${cash.toStringAsFixed(0)}',
+                        '\$${cash.toStringAsFixed(2)}',
                         Colors.blue,
-                        (cash / totalValue * 100).toStringAsFixed(1),
+                        totalValue > 0
+                            ? (cash / totalValue * 100).toStringAsFixed(1)
+                            : '0.0',
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildBreakdownCard(
                         'Stocks',
-                        '\$${stocksValue.toStringAsFixed(0)}',
+                        '\$${stocksValue.toStringAsFixed(2)}',
                         Colors.green,
-                        (stocksValue / totalValue * 100).toStringAsFixed(1),
+                        totalValue > 0
+                            ? (stocksValue / totalValue * 100).toStringAsFixed(
+                                1,
+                              )
+                            : '0.0',
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Quick Stats
                 Row(
                   children: [
                     Expanded(
@@ -245,7 +251,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                     Expanded(
                       child: _buildStatCard(
                         'Total Trades',
-                        '${portfolio.totalTrades}',
+                        '${portfolio.transactions.length}',
                         Icons.swap_horiz,
                         Colors.purple,
                       ),
@@ -254,7 +260,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                     Expanded(
                       child: _buildStatCard(
                         'Level',
-                        '${portfolio.userLevel}',
+                        '${_calculateUserLevel(portfolio.totalValue)}',
                         Icons.star,
                         Colors.yellow,
                       ),
@@ -345,8 +351,10 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildPerformanceChart(PortfolioProvider portfolio) {
-    final history = portfolio.portfolioValueHistory;
+  Widget _buildPerformanceChart(EnhancedPortfolioProvider portfolio) {
+    // FIX: Use the correct provider
+    // Generate sample history data
+    final history = _generateSampleHistory(portfolio);
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -449,8 +457,8 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildChart(List<dynamic> history) {
-    return Container(
+  Widget _buildChart(List<Map<String, dynamic>> history) {
+    return SizedBox(
       height: 200,
       child: CustomPaint(
         size: const Size(double.infinity, 200),
@@ -459,7 +467,8 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildHoldingsList(PortfolioProvider portfolio) {
+  Widget _buildHoldingsList(EnhancedPortfolioProvider portfolio) {
+    // FIX: Use the correct provider
     final holdings = portfolio.holdings;
 
     if (holdings.isEmpty) {
@@ -501,11 +510,17 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
+                      // Navigate to trade screen with some default stock
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              const ModernTradeScreen(stockData: {}),
+                          builder: (context) => const TradeScreen(
+                            stockData: {
+                              'symbol': 'AAPL',
+                              'name': 'Apple Inc.',
+                              'price': 170.0,
+                            },
+                          ),
                         ),
                       );
                     },
@@ -558,10 +573,14 @@ class _PortfolioScreenState extends State<PortfolioScreen>
               ...holdings.entries.map((entry) {
                 final symbol = entry.key;
                 final quantity = entry.value;
-                final currentPrice = portfolio.currentPrices[symbol] ?? 0.0;
+                final stockInfo = portfolio.getStockData(symbol);
+
+                final currentPrice = stockInfo?.currentPrice ?? 0.0;
                 final value = quantity * currentPrice;
-                final purchasePrice =
-                    portfolio.getPurchasePrice(symbol) ?? currentPrice;
+                final purchasePrice = _getAveragePurchasePrice(
+                  portfolio,
+                  symbol,
+                );
                 final gainLoss = (currentPrice - purchasePrice) * quantity;
                 final gainLossPercent = purchasePrice > 0
                     ? ((currentPrice - purchasePrice) / purchasePrice) * 100
@@ -604,7 +623,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
         ),
         child: Row(
           children: [
-            // Stock Symbol
             Expanded(
               flex: 2,
               child: Column(
@@ -628,8 +646,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 ],
               ),
             ),
-
-            // Current Price
             Expanded(
               flex: 2,
               child: Column(
@@ -653,15 +669,13 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 ],
               ),
             ),
-
-            // Value and P&L
             Expanded(
               flex: 2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$${value.toStringAsFixed(0)}',
+                    '\$${value.toStringAsFixed(2)}',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -678,7 +692,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${isPositive ? '+' : ''}\$${gainLoss.toStringAsFixed(0)}',
+                        '${isPositive ? '+' : ''}\$${gainLoss.toStringAsFixed(2)}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: isPositive ? Colors.green : Colors.red,
@@ -702,8 +716,9 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildRecentTransactions(PortfolioProvider portfolio) {
-    final transactions = portfolio.transactionHistory;
+  Widget _buildRecentTransactions(EnhancedPortfolioProvider portfolio) {
+    // FIX: Use the correct provider
+    final transactions = portfolio.transactions;
 
     if (transactions.isEmpty) {
       return SliverToBoxAdapter(
@@ -781,8 +796,8 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildTransactionItem(dynamic transaction) {
-    final isBuy = transaction.type == 'buy';
+  Widget _buildTransactionItem(Transaction transaction) {
+    final isBuy = transaction.type == TransactionType.buy;
     final color = isBuy ? Colors.green : Colors.red;
     final icon = isBuy ? Icons.arrow_upward : Icons.arrow_downward;
 
@@ -811,7 +826,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${transaction.type.toUpperCase()} ${transaction.symbol}',
+                    '${isBuy ? "BUY" : "SELL"} ${transaction.symbol}',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -832,7 +847,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '\$${(transaction.quantity * transaction.price).toStringAsFixed(0)}',
+                  '\$${(transaction.quantity * transaction.price).toStringAsFixed(2)}',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -850,16 +865,69 @@ class _PortfolioScreenState extends State<PortfolioScreen>
       ),
     );
   }
+
+  int _calculateUserLevel(double totalValue) {
+    if (totalValue >= 1000000) return 10;
+    if (totalValue >= 500000) return 9;
+    if (totalValue >= 250000) return 8;
+    if (totalValue >= 100000) return 7;
+    if (totalValue >= 50000) return 6;
+    if (totalValue >= 25000) return 5;
+    if (totalValue >= 10000) return 4;
+    if (totalValue >= 5000) return 3;
+    if (totalValue >= 1000) return 2;
+    return 1;
+  }
+
+  double _getAveragePurchasePrice(
+    EnhancedPortfolioProvider portfolio,
+    String symbol,
+  ) {
+    // Calculate average purchase price from transaction history
+    final transactions = portfolio.transactions
+        .where((t) => t.symbol == symbol && t.type == TransactionType.buy)
+        .toList();
+
+    if (transactions.isEmpty) return 0.0;
+
+    double totalCost = 0.0;
+    int totalQuantity = 0;
+
+    for (final transaction in transactions) {
+      totalCost += transaction.price * transaction.quantity;
+      totalQuantity += transaction.quantity;
+    }
+
+    return totalQuantity > 0 ? totalCost / totalQuantity : 0.0;
+  }
+
+  List<Map<String, dynamic>> _generateSampleHistory(
+    EnhancedPortfolioProvider portfolio,
+  ) {
+    final currentValue = portfolio.totalValue;
+    final List<Map<String, dynamic>> history = [];
+
+    for (int i = 29; i >= 0; i--) {
+      final date = DateTime.now().subtract(Duration(days: i));
+      final variation =
+          (math.Random().nextDouble() - 0.5) * 0.1; // ±5% variation
+      final value = currentValue * (1 + variation);
+
+      history.add({'date': date, 'value': value});
+    }
+
+    return history;
+  }
 }
 
 class _PortfolioChartPainter extends CustomPainter {
-  final List<dynamic> history;
+  final List<Map<String, dynamic>> history;
 
   _PortfolioChartPainter(this.history);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (history.isEmpty) return;
+    if (history.length < 2) return;
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -867,13 +935,12 @@ class _PortfolioChartPainter extends CustomPainter {
       ..color = const Color(0xFF00FFA3);
 
     final path = Path();
-    final values = history.map((point) => point.value).toList();
+    final values = history.map((point) => point['value'] as double).toList();
     final maxValue = values.reduce((a, b) => a > b ? a : b);
     final minValue = values.reduce((a, b) => a < b ? a : b);
     final range = maxValue - minValue;
 
     if (range == 0) {
-      // All values are the same, draw a horizontal line
       final y = size.height * 0.5;
       path.moveTo(0, y);
       path.lineTo(size.width, y);
@@ -892,7 +959,6 @@ class _PortfolioChartPainter extends CustomPainter {
 
     canvas.drawPath(path, paint);
 
-    // Draw area under the curve
     final areaPaint = Paint()
       ..style = PaintingStyle.fill
       ..shader = LinearGradient(
@@ -904,8 +970,7 @@ class _PortfolioChartPainter extends CustomPainter {
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final areaPath = Path();
-    areaPath.addPath(path, Offset.zero);
+    final areaPath = Path.from(path);
     areaPath.lineTo(size.width, size.height);
     areaPath.lineTo(0, size.height);
     areaPath.close();

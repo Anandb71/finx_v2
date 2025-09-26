@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../screens/dashboard_screen.dart';
+import '../screens/liquid_material_dashboard.dart';
 import '../main.dart';
 
 class AuthGate extends StatelessWidget {
@@ -51,7 +51,7 @@ class AuthGate extends StatelessWidget {
 
         // User is logged in - show dashboard
         if (snapshot.hasData) {
-          return const DashboardScreen();
+          return const LiquidMaterialDashboard();
         }
 
         // User is NOT logged in - show landing page
