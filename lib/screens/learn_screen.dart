@@ -263,7 +263,7 @@ class _LearnScreenState extends State<LearnScreen>
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 1.0,
+          childAspectRatio: 0.85,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
@@ -298,43 +298,52 @@ class _LearnScreenState extends State<LearnScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [tool['color1'] as Color, tool['color2'] as Color],
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: (tool['color1'] as Color).withOpacity(0.5),
-                    blurRadius: 10,
+                    blurRadius: 8,
                   ),
                 ],
               ),
               child: Icon(
                 tool['icon'] as IconData,
                 color: Colors.white,
-                size: 24,
+                size: 20,
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              tool['name'] as String,
-              style: LiquidTextStyle.titleMedium(
-                context,
-              ).copyWith(fontSize: 16),
-              textAlign: TextAlign.center,
+            const SizedBox(height: 12),
+            Flexible(
+              child: Text(
+                tool['name'] as String,
+                style: LiquidTextStyle.titleMedium(
+                  context,
+                ).copyWith(fontSize: 14),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const SizedBox(height: 4),
-            Text(
-              tool['description'] as String,
-              style: LiquidTextStyle.bodyMedium(context),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            Flexible(
+              child: Text(
+                tool['description'] as String,
+                style: LiquidTextStyle.bodyMedium(
+                  context,
+                ).copyWith(fontSize: 12),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

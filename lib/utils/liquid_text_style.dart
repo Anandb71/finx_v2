@@ -46,4 +46,3 @@ class LiquidTextStyle {
     color: Theme.of(context).colorScheme.onSurface,
   );
 }
-

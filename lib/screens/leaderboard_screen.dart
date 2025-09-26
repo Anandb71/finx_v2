@@ -1,7 +1,6 @@
 // lib/screens/leaderboard_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../models/leaderboard_entry.dart';
@@ -17,9 +16,11 @@ class LeaderboardScreen extends StatefulWidget {
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProviderStateMixin {
+class _LeaderboardScreenState extends State<LeaderboardScreen>
+    with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _listAnimationController;
+  late AnimationController _auroraController;
 
   @override
   void initState() {
@@ -32,14 +33,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
+    _auroraController = AnimationController(
+      duration: const Duration(seconds: 30),
+      vsync: this,
+    );
+
     _fadeController.forward();
     _listAnimationController.forward();
+    _auroraController.repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _listAnimationController.dispose();
+    _auroraController.dispose();
     super.dispose();
   }
 
@@ -47,32 +55,51 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        // THEME UPDATE: Using dashboard's background
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Theme.of(context).colorScheme.background,
-              Theme.of(context).colorScheme.primary.withOpacity(0.03),
+      body: Stack(
+        children: [
+          // Aurora background
+          _buildAuroraBackground(),
+          // Main content
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildLiquidAppBar(),
+              _buildStatsSection(),
+              _buildLeaderboardList(),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
-        ),
-        child: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(),
-            _buildStatsSection(),
-            _buildLeaderboardList(),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar() {
-    // THEME UPDATE: Rebuilt AppBar to match dashboard style
+  Widget _buildAuroraBackground() {
+    return AnimatedBuilder(
+      animation: _auroraController,
+      builder: (context, child) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(
+                  colorScheme.background,
+                  colorScheme.primary.withOpacity(0.03),
+                  _auroraController.value,
+                )!,
+                colorScheme.background,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLiquidAppBar() {
     return SliverAppBar(
       pinned: true,
       backgroundColor: Colors.transparent,
@@ -83,8 +110,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
           filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
           child: Container(
             decoration: BoxDecoration(
-              color: LiquidMaterialTheme.darkSpaceBackground(context).withOpacity(0.5),
-              border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
+              color: LiquidMaterialTheme.darkSpaceBackground(
+                context,
+              ).withOpacity(0.5),
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
@@ -113,8 +144,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
     return SliverToBoxAdapter(
       child: FadeTransition(
         opacity: _fadeController,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
           child: Consumer<EnhancedPortfolioProvider>(
             builder: (context, portfolio, child) {
               return Row(
@@ -122,7 +153,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
                   Expanded(
                     child: _buildStatCard(
                       'Your Rank',
-                      '#1', // Placeholder
+                      '#1',
                       Icons.emoji_events_outlined,
                     ),
                   ),
@@ -144,13 +175,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
   }
 
   Widget _buildStatCard(String title, String value, IconData icon) {
-    // THEME UPDATE: Re-styled with LiquidCard for consistency
     return LiquidCard(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Icon(icon, color: LiquidMaterialTheme.neonAccent(context), size: 24),
+            Icon(
+              icon,
+              color: LiquidMaterialTheme.neonAccent(context),
+              size: 24,
+            ),
             const SizedBox(height: 8),
             Text(
               value,
@@ -174,9 +208,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
       child: FadeTransition(
         opacity: _listAnimationController,
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           child: LiquidCard(
-            padding: EdgeInsets.zero, // Remove padding to handle list items manually
             child: Consumer<EnhancedPortfolioProvider>(
               builder: (context, portfolio, child) {
                 final leaderboardData = _getLeaderboardData(portfolio);
@@ -198,13 +231,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
     );
   }
 
-  Widget _buildLeaderboardItem(LeaderboardEntry entry, int rank, {bool isLast = false}) {
+  Widget _buildLeaderboardItem(
+    LeaderboardEntry entry,
+    int rank, {
+    bool isLast = false,
+  }) {
     final isCurrentUser = entry.isCurrentUser;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        border: isLast ? null : Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
-        color: isCurrentUser ? LiquidMaterialTheme.neonAccent(context).withOpacity(0.1) : Colors.transparent,
+        border: isLast
+            ? null
+            : Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
+        color: isCurrentUser
+            ? LiquidMaterialTheme.neonAccent(context).withOpacity(0.1)
+            : Colors.transparent,
       ),
       child: Row(
         children: [
@@ -239,7 +280,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(entry.name, style: LiquidTextStyle.titleMedium(context)),
-                Text('Level ${entry.level}', style: LiquidTextStyle.bodyMedium(context)),
+                Text(
+                  'Level ${entry.level}',
+                  style: LiquidTextStyle.bodyMedium(context),
+                ),
               ],
             ),
           ),
@@ -248,14 +292,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
             children: [
               Text(
                 '\$${entry.value.toStringAsFixed(0)}',
-                style: LiquidTextStyle.titleMedium(context).copyWith(
-                  color: LiquidMaterialTheme.neonAccent(context)
-                ),
+                style: LiquidTextStyle.titleMedium(
+                  context,
+                ).copyWith(color: LiquidMaterialTheme.neonAccent(context)),
               ),
               Text(
                 '${entry.change >= 0 ? '+' : ''}${entry.change.toStringAsFixed(1)}%',
                 style: LiquidTextStyle.bodyMedium(context).copyWith(
-                  color: entry.change >= 0 ? Colors.greenAccent : Colors.redAccent,
+                  color: entry.change >= 0
+                      ? Colors.greenAccent
+                      : Colors.redAccent,
                 ),
               ),
             ],
@@ -265,7 +311,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
     );
   }
 
-  List<LeaderboardEntry> _getLeaderboardData(EnhancedPortfolioProvider portfolio) {
+  List<LeaderboardEntry> _getLeaderboardData(
+    EnhancedPortfolioProvider portfolio,
+  ) {
     return [
       LeaderboardEntry(
         name: 'You',
@@ -275,31 +323,31 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with TickerProvid
         isCurrentUser: true,
       ),
       // Add mock data for other players
-      LeaderboardEntry(name: 'Alex', level: 15, value: 95200, change: 1.5, isCurrentUser: false),
-      LeaderboardEntry(name: 'BetaTrader', level: 12, value: 88750, change: -0.8, isCurrentUser: false),
-      LeaderboardEntry(name: 'CryptoKate', level: 11, value: 85100, change: 2.1, isCurrentUser: false),
+      LeaderboardEntry(
+        name: 'Alex',
+        level: 15,
+        value: 95200,
+        change: 1.5,
+        isCurrentUser: false,
+      ),
+      LeaderboardEntry(
+        name: 'BetaTrader',
+        level: 12,
+        value: 88750,
+        change: -0.8,
+        isCurrentUser: false,
+      ),
+      LeaderboardEntry(
+        name: 'CryptoKate',
+        level: 11,
+        value: 85100,
+        change: 2.1,
+        isCurrentUser: false,
+      ),
     ];
   }
 
   double _getUserScore(EnhancedPortfolioProvider portfolio) {
     return portfolio.totalValue;
   }
-}
-
-// You might need to add this to your models directory if it doesn't exist
-// lib/models/leaderboard_entry.dart
-class LeaderboardEntry {
-  final String name;
-  final int level;
-  final double value;
-  final double change;
-  final bool isCurrentUser;
-
-  LeaderboardEntry({
-    required this.name,
-    required this.level,
-    required this.value,
-    required this.change,
-    required this.isCurrentUser,
-  });
 }

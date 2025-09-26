@@ -1,7 +1,12 @@
+// lib/screens/signup_screen.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 import '../services/user_service.dart';
+import '../theme/liquid_material_theme.dart';
+import '../widgets/liquid_card.dart';
+import '../utils/liquid_text_style.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -10,7 +15,8 @@ class SignUpScreen extends StatefulWidget {
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends State<SignUpScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -18,6 +24,422 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  late AnimationController _fadeController;
+  late AnimationController _auroraController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAnimations();
+  }
+
+  void _setupAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _auroraController = AnimationController(
+      duration: const Duration(seconds: 30),
+      vsync: this,
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    );
+
+    _fadeController.forward();
+    _auroraController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _fadeController.dispose();
+    _auroraController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Aurora background
+          _buildAuroraBackground(),
+          // Main content
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLogo(),
+                    const SizedBox(height: 48),
+                    _buildSignUpForm(),
+                    const SizedBox(height: 24),
+                    _buildLoginLink(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuroraBackground() {
+    return AnimatedBuilder(
+      animation: _auroraController,
+      builder: (context, child) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(
+                  colorScheme.background,
+                  colorScheme.primary.withOpacity(0.05),
+                  _auroraController.value,
+                )!,
+                colorScheme.background,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLogo() {
+    return Column(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                LiquidMaterialTheme.neonAccent(context),
+                LiquidMaterialTheme.neonAccent(context).withOpacity(0.7),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: LiquidMaterialTheme.neonAccent(context).withOpacity(0.3),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: const Icon(Icons.trending_up, color: Colors.white, size: 40),
+        ),
+        const SizedBox(height: 24),
+        Text('Join FinX', style: LiquidTextStyle.headlineLarge(context)),
+        const SizedBox(height: 8),
+        Text(
+          'Start your investment journey today',
+          style: LiquidTextStyle.bodyLarge(
+            context,
+          ).copyWith(color: Colors.white70),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignUpForm() {
+    return LiquidCard(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Create Account',
+                style: LiquidTextStyle.headlineMedium(context),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              _buildEmailField(),
+              const SizedBox(height: 24),
+              _buildPasswordField(),
+              const SizedBox(height: 24),
+              _buildConfirmPasswordField(),
+              const SizedBox(height: 32),
+              _buildSignUpButton(),
+              const SizedBox(height: 16),
+              _buildTermsAndConditions(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmailField() {
+    return TextFormField(
+      controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
+      style: LiquidTextStyle.bodyMedium(context),
+      decoration: InputDecoration(
+        labelText: 'Email',
+        labelStyle: LiquidTextStyle.bodyMedium(
+          context,
+        ).copyWith(color: Colors.white70),
+        hintText: 'Enter your email',
+        hintStyle: LiquidTextStyle.bodyMedium(
+          context,
+        ).copyWith(color: Colors.white60),
+        prefixIcon: Icon(
+          Icons.email_outlined,
+          color: LiquidMaterialTheme.neonAccent(context),
+        ),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.1),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: LiquidMaterialTheme.neonAccent(context),
+            width: 2,
+          ),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter your email';
+        }
+        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+          return 'Please enter a valid email';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextFormField(
+      controller: _passwordController,
+      obscureText: _obscurePassword,
+      style: LiquidTextStyle.bodyMedium(context),
+      decoration: InputDecoration(
+        labelText: 'Password',
+        labelStyle: LiquidTextStyle.bodyMedium(
+          context,
+        ).copyWith(color: Colors.white70),
+        hintText: 'Create a password',
+        hintStyle: LiquidTextStyle.bodyMedium(
+          context,
+        ).copyWith(color: Colors.white60),
+        prefixIcon: Icon(
+          Icons.lock_outline,
+          color: LiquidMaterialTheme.neonAccent(context),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: Colors.white70,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+        ),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.1),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: LiquidMaterialTheme.neonAccent(context),
+            width: 2,
+          ),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter a password';
+        }
+        if (value.length < 6) {
+          return 'Password must be at least 6 characters';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildConfirmPasswordField() {
+    return TextFormField(
+      controller: _confirmPasswordController,
+      obscureText: _obscureConfirmPassword,
+      style: LiquidTextStyle.bodyMedium(context),
+      decoration: InputDecoration(
+        labelText: 'Confirm Password',
+        labelStyle: LiquidTextStyle.bodyMedium(
+          context,
+        ).copyWith(color: Colors.white70),
+        hintText: 'Confirm your password',
+        hintStyle: LiquidTextStyle.bodyMedium(
+          context,
+        ).copyWith(color: Colors.white60),
+        prefixIcon: Icon(
+          Icons.lock_outline,
+          color: LiquidMaterialTheme.neonAccent(context),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+            color: Colors.white70,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscureConfirmPassword = !_obscureConfirmPassword;
+            });
+          },
+        ),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.1),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: LiquidMaterialTheme.neonAccent(context),
+            width: 2,
+          ),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please confirm your password';
+        }
+        if (value != _passwordController.text) {
+          return 'Passwords do not match';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildSignUpButton() {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            LiquidMaterialTheme.neonAccent(context),
+            LiquidMaterialTheme.neonAccent(context).withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: LiquidMaterialTheme.neonAccent(context).withOpacity(0.3),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _signUp,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _isLoading
+            ? SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    LiquidMaterialTheme.darkSpaceBackground(context),
+                  ),
+                ),
+              )
+            : Text(
+                'Create Account',
+                style: LiquidTextStyle.titleMedium(context).copyWith(
+                  color: LiquidMaterialTheme.darkSpaceBackground(context),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildTermsAndConditions() {
+    return Text(
+      'By creating an account, you agree to our Terms of Service and Privacy Policy',
+      style: LiquidTextStyle.bodyMedium(
+        context,
+      ).copyWith(color: Colors.white60, fontSize: 12),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildLoginLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'Already have an account? ',
+          style: LiquidTextStyle.bodyMedium(
+            context,
+          ).copyWith(color: Colors.white70),
+        ),
+        GestureDetector(
+          onTap: () {
+            Navigator.pop(context);
+          },
+          child: Text(
+            'Sign In',
+            style: LiquidTextStyle.bodyMedium(context).copyWith(
+              color: LiquidMaterialTheme.neonAccent(context),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
@@ -50,8 +472,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Account created successfully!'),
-            backgroundColor: const Color(0xFF00FFA3),
+            content: Text(
+              'Account created successfully! Welcome to FinX!',
+              style: LiquidTextStyle.bodyMedium(context),
+            ),
+            backgroundColor: LiquidMaterialTheme.neonAccent(context),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -63,19 +488,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
           errorMessage = 'Password is too weak';
           break;
         case 'email-already-in-use':
-          errorMessage = 'Email is already in use';
+          errorMessage = 'An account already exists with this email';
           break;
         case 'invalid-email':
           errorMessage = 'Invalid email address';
           break;
+        case 'operation-not-allowed':
+          errorMessage = 'Email/password accounts are not enabled';
+          break;
         default:
-          errorMessage = e.message ?? 'An error occurred';
+          errorMessage = 'Sign up failed: ${e.message}';
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text(
+              errorMessage,
+              style: LiquidTextStyle.bodyMedium(context),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'An unexpected error occurred: $e',
+              style: LiquidTextStyle.bodyMedium(context),
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -88,325 +532,5 @@ class _SignUpScreenState extends State<SignUpScreen> {
         });
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F0F23),
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo and Title
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF00FFA3).withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 0,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.auto_graph_rounded,
-                          color: Colors.black,
-                          size: 40,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Create Account',
-                        style: GoogleFonts.inter(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Join Finx and start your investment journey',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 40),
-
-                      // Email Field
-                      _buildTextField(
-                        controller: _emailController,
-                        label: 'Email',
-                        hint: 'Enter your email address',
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: Icons.email_outlined,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          if (!RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                          ).hasMatch(value)) {
-                            return 'Please enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Password Field
-                      _buildTextField(
-                        controller: _passwordController,
-                        label: 'Password',
-                        hint: 'Create a strong password',
-                        obscureText: _obscurePassword,
-                        prefixIcon: Icons.lock_outline,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a password';
-                          }
-                          if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Confirm Password Field
-                      _buildTextField(
-                        controller: _confirmPasswordController,
-                        label: 'Confirm Password',
-                        hint: 'Confirm your password',
-                        obscureText: _obscureConfirmPassword,
-                        prefixIcon: Icons.lock_outline,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
-                            });
-                          },
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please confirm your password';
-                          }
-                          if (value != _passwordController.text) {
-                            return 'Passwords do not match';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Sign Up Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _signUp,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Colors.black,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFF00FFA3,
-                                  ).withOpacity(0.3),
-                                  blurRadius: 15,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.black,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Create Account',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Login Link
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Already have an account? ',
-                            style: GoogleFonts.inter(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 14,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Text(
-                              'Sign In',
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF00FFA3),
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData prefixIcon,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      validator: validator,
-      style: GoogleFonts.inter(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: const Color(0xFF00FFA3)),
-        suffixIcon: suffixIcon,
-        labelStyle: GoogleFonts.inter(color: Colors.white.withOpacity(0.7)),
-        hintStyle: GoogleFonts.inter(color: Colors.white.withOpacity(0.5)),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.08),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF00FFA3), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-    );
   }
 }

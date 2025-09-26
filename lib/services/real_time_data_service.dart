@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class RealTimeDataService {
   static final RealTimeDataService _instance = RealTimeDataService._internal();
@@ -9,8 +10,7 @@ class RealTimeDataService {
   RealTimeDataService._internal();
 
   // Configuration
-  static const String _finnhubApiKey =
-      'd37otghr01qskreh7ci0d37otghr01qskreh7cig';
+  static String get _finnhubApiKey => dotenv.env['FINNHUB_API_KEY'] ?? '';
   static const String _finnhubBaseUrl = 'https://finnhub.io/api/v1';
 
   // Data caches

@@ -1,9 +1,14 @@
+// lib/screens/ai_mentor_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 import 'dart:math' as math;
 import '../services/gemini_ai_service.dart';
-import '../services/portfolio_provider.dart';
+import '../services/enhanced_portfolio_provider.dart';
+import '../theme/liquid_material_theme.dart';
+import '../widgets/liquid_card.dart';
+import '../utils/liquid_text_style.dart';
 
 class AIMentorScreen extends StatefulWidget {
   const AIMentorScreen({super.key});
@@ -19,6 +24,7 @@ class _AIMentorScreenState extends State<AIMentorScreen>
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
   late AnimationController _typingController;
+  late AnimationController _auroraController;
   late Animation<double> _typingAnimation;
 
   // Initialize Gemini AI service
@@ -27,7 +33,6 @@ class _AIMentorScreenState extends State<AIMentorScreen>
   @override
   void initState() {
     super.initState();
-    print('AI Mentor Screen initialized!');
     _setupAnimations();
     _initializeAI();
   }
@@ -48,43 +53,16 @@ class _AIMentorScreenState extends State<AIMentorScreen>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
+    _auroraController = AnimationController(
+      duration: const Duration(seconds: 30),
+      vsync: this,
+    );
+
     _typingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _typingController, curve: Curves.easeInOut),
     );
-  }
 
-  void _addWelcomeMessage() async {
-    if (_isInitialized) {
-      try {
-        final welcomeMessage = await GeminiAIService.getWelcomeMessage();
-        _messages.add(
-          ChatMessage(
-            text: welcomeMessage,
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-      } catch (e) {
-        print('Error getting welcome message: $e');
-        _messages.add(
-          ChatMessage(
-            text:
-                "Hello! I'm your AI Mentor. Ask me anything about investing, like 'What is an ETF?' or 'How do I buy a stock?' I'm here to help you learn!",
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-      }
-    } else {
-      _messages.add(
-        ChatMessage(
-          text:
-              "Hello! I'm your AI Mentor. Ask me anything about investing, like 'What is an ETF?' or 'How do I buy a stock?' I'm here to help you learn!",
-          isUser: false,
-          timestamp: DateTime.now(),
-        ),
-      );
-    }
+    _auroraController.repeat(reverse: true);
   }
 
   @override
@@ -92,17 +70,329 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     _messageController.dispose();
     _scrollController.dispose();
     _typingController.dispose();
+    _auroraController.dispose();
     super.dispose();
   }
 
-  void _sendMessage() async {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Aurora background
+          _buildAuroraBackground(),
+          // Main content
+          Column(
+            children: [
+              _buildLiquidAppBar(),
+              Expanded(child: _buildChatInterface()),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-    // Add user message
+  Widget _buildAuroraBackground() {
+    return AnimatedBuilder(
+      animation: _auroraController,
+      builder: (context, child) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(
+                  colorScheme.background,
+                  colorScheme.primary.withOpacity(0.03),
+                  _auroraController.value,
+                )!,
+                colorScheme.background,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLiquidAppBar() {
+    return Container(
+      height: 100,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: LiquidMaterialTheme.darkSpaceBackground(
+                context,
+              ).withOpacity(0.5),
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.psychology_outlined,
+                    color: LiquidMaterialTheme.neonAccent(context),
+                    size: 28,
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'AI Mentor',
+                    style: LiquidTextStyle.headlineMedium(context),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _isInitialized
+                          ? LiquidMaterialTheme.neonAccent(
+                              context,
+                            ).withOpacity(0.2)
+                          : Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      _isInitialized ? 'Online' : 'Offline',
+                      style: LiquidTextStyle.labelSmall(context).copyWith(
+                        color: _isInitialized
+                            ? LiquidMaterialTheme.neonAccent(context)
+                            : Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatInterface() {
+    return Column(
+      children: [
+        Expanded(child: _buildMessagesList()),
+        _buildMessageInput(),
+      ],
+    );
+  }
+
+  Widget _buildMessagesList() {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(24),
+      itemCount: _messages.length + (_isTyping ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == _messages.length && _isTyping) {
+          return _buildTypingIndicator();
+        }
+        return _buildMessageBubble(_messages[index]);
+      },
+    );
+  }
+
+  Widget _buildMessageBubble(ChatMessage message) {
+    final isUser = message.isUser;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        children: [
+          if (!isUser) ...[
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    LiquidMaterialTheme.neonAccent(context),
+                    LiquidMaterialTheme.neonAccent(context).withOpacity(0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.psychology,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Flexible(
+            child: LiquidCard(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message.text,
+                      style: LiquidTextStyle.bodyMedium(context),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatTime(message.timestamp),
+                      style: LiquidTextStyle.labelSmall(
+                        context,
+                      ).copyWith(color: Colors.white60),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (isUser) ...[
+            const SizedBox(width: 12),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(Icons.person, color: Colors.white, size: 20),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  LiquidMaterialTheme.neonAccent(context),
+                  LiquidMaterialTheme.neonAccent(context).withOpacity(0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.psychology, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          LiquidCard(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: AnimatedBuilder(
+                animation: _typingAnimation,
+                builder: (context, child) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(3, (index) {
+                      final delay = index * 0.2;
+                      final animationValue = (_typingAnimation.value - delay)
+                          .clamp(0.0, 1.0);
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: LiquidMaterialTheme.neonAccent(
+                            context,
+                          ).withOpacity(animationValue),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      );
+                    }),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageInput() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: LiquidCard(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  style: LiquidTextStyle.bodyMedium(context),
+                  decoration: InputDecoration(
+                    hintText: 'Ask your AI mentor anything...',
+                    hintStyle: LiquidTextStyle.bodyMedium(
+                      context,
+                    ).copyWith(color: Colors.white60),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  maxLines: null,
+                  onSubmitted: _sendMessage,
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: _sendMessage,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        LiquidMaterialTheme.neonAccent(context),
+                        LiquidMaterialTheme.neonAccent(
+                          context,
+                        ).withOpacity(0.7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(Icons.send, color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _sendMessage([String? text]) {
+    final messageText = text ?? _messageController.text.trim();
+    if (messageText.isEmpty) return;
+
     setState(() {
       _messages.add(
-        ChatMessage(text: text, isUser: true, timestamp: DateTime.now()),
+        ChatMessage(text: messageText, isUser: true, timestamp: DateTime.now()),
       );
       _isTyping = true;
     });
@@ -110,57 +400,54 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     _messageController.clear();
     _scrollToBottom();
 
-    // Get AI response with portfolio context
+    if (_isInitialized) {
+      _getAIResponse(messageText);
+    } else {
+      _addErrorMessage();
+    }
+  }
+
+  void _getAIResponse(String userMessage) async {
     try {
-      String aiResponse;
-      if (_isInitialized) {
-        // Get portfolio data for AI context
-        final portfolio = Provider.of<PortfolioProvider>(
-          context,
-          listen: false,
-        );
-        final portfolioData = {
-          'virtualCash': portfolio.virtualCash,
-          'holdings': portfolio.holdings,
-          'totalValue': portfolio.totalValue,
-        };
-
-        // Use portfolio-aware AI
-        aiResponse = await GeminiAIService.getPortfolioAdvice(
-          text,
-          portfolioData,
-        );
-      } else {
-        // Fallback to random tip if AI is not initialized
-        aiResponse = await GeminiAIService.getRandomTip();
-      }
-
+      final response = await GeminiAIService.getFinancialAdvice(userMessage);
       setState(() {
         _messages.add(
-          ChatMessage(
-            text: aiResponse,
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
+          ChatMessage(text: response, isUser: false, timestamp: DateTime.now()),
         );
         _isTyping = false;
       });
     } catch (e) {
-      print('Error getting AI response: $e');
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text:
-                "I'm having trouble connecting right now. Please try again in a moment!",
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-        _isTyping = false;
-      });
+      _addErrorMessage();
     }
-
     _scrollToBottom();
+  }
+
+  void _addWelcomeMessage() {
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          text: _isInitialized
+              ? "Hello! I'm your AI financial mentor. I'm here to help you with investment strategies, market analysis, and portfolio management. What would you like to know?"
+              : "Hello! I'm your AI financial mentor, but I'm currently offline. I can still provide some basic guidance. What would you like to know?",
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+    });
+  }
+
+  void _addErrorMessage() {
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          text:
+              "I'm sorry, I'm having trouble connecting right now. Please try again later or check your internet connection.",
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+      _isTyping = false;
+    });
   }
 
   void _scrollToBottom() {
@@ -175,355 +462,15 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0A0A0A), Color(0xFF1A1A1A), Color(0xFF0A0A0A)],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(child: _buildChatList()),
-              _buildMessageInput(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.smart_toy, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AI Mentor',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  'Your financial guide',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00FFA3).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF00FFA3).withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              'Online',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF00FFA3),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChatList() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: _messages.length + (_isTyping ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _messages.length && _isTyping) {
-          return _buildTypingIndicator();
-        }
-        return _buildMessageBubble(_messages[index]);
-      },
-    );
-  }
-
-  Widget _buildMessageBubble(ChatMessage message) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        mainAxisAlignment: message.isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        children: [
-          if (!message.isUser) ...[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.smart_toy, color: Colors.white, size: 16),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: message.isUser
-                    ? const Color(0xFF00FFA3)
-                    : Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20).copyWith(
-                  bottomLeft: message.isUser
-                      ? const Radius.circular(20)
-                      : const Radius.circular(4),
-                  bottomRight: message.isUser
-                      ? const Radius.circular(4)
-                      : const Radius.circular(20),
-                ),
-                border: message.isUser
-                    ? null
-                    : Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 1,
-                      ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message.text,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: message.isUser ? Colors.black : Colors.white,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTime(message.timestamp),
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      color: message.isUser
-                          ? Colors.black.withOpacity(0.6)
-                          : Colors.white.withOpacity(0.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (message.isUser) ...[
-            const SizedBox(width: 8),
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.person, color: Colors.white, size: 16),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.smart_toy, color: Colors.white, size: 16),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(
-                20,
-              ).copyWith(bottomLeft: const Radius.circular(4)),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
-            child: AnimatedBuilder(
-              animation: _typingAnimation,
-              builder: (context, child) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildTypingDot(0),
-                    const SizedBox(width: 4),
-                    _buildTypingDot(1),
-                    const SizedBox(width: 4),
-                    _buildTypingDot(2),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypingDot(int index) {
-    final delay = index * 0.2;
-    final animationValue = (_typingAnimation.value - delay).clamp(0.0, 1.0);
-    final opacity = (math.sin(animationValue * math.pi * 2) + 1) / 2;
-
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(opacity),
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-
-  Widget _buildMessageInput() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: TextField(
-                controller: _messageController,
-                style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Ask me anything about investing...',
-                  hintStyle: GoogleFonts.inter(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 14,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                ),
-                maxLines: null,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendMessage(),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: _sendMessage,
-            child: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                ),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00FFA3).withOpacity(0.3),
-                    blurRadius: 10,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.send, color: Colors.white, size: 20),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatTime(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
     if (difference.inMinutes < 1) {
       return 'Just now';
-    } else if (difference.inHours < 1) {
+    } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ago';
-    } else if (difference.inDays < 1) {
+    } else if (difference.inHours < 24) {
       return '${difference.inHours}h ago';
     } else {
       return '${difference.inDays}d ago';

@@ -1,9 +1,14 @@
+// lib/screens/achievements_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../services/portfolio_provider.dart';
+import 'dart:ui';
+import '../services/enhanced_portfolio_provider.dart';
 import '../services/achievement_service.dart';
 import '../models/achievement.dart';
+import '../theme/liquid_material_theme.dart';
+import '../widgets/liquid_card.dart';
+import '../utils/liquid_text_style.dart';
 
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({super.key});
@@ -16,6 +21,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     with TickerProviderStateMixin {
   late AnimationController _headerAnimationController;
   late AnimationController _cardAnimationController;
+  late AnimationController _auroraController;
   late Animation<double> _headerAnimation;
   late Animation<double> _cardAnimation;
 
@@ -39,6 +45,10 @@ class _AchievementsScreenState extends State<AchievementsScreen>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
+    _auroraController = AnimationController(
+      duration: const Duration(seconds: 30),
+      vsync: this,
+    );
 
     _headerAnimation = CurvedAnimation(
       parent: _headerAnimationController,
@@ -51,495 +61,469 @@ class _AchievementsScreenState extends State<AchievementsScreen>
 
     _headerAnimationController.forward();
     _cardAnimationController.forward();
+    _auroraController.repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _headerAnimationController.dispose();
     _cardAnimationController.dispose();
+    _auroraController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0A0A0A), Color(0xFF1A1A1A), Color(0xFF0F0F0F)],
-          ),
-        ),
-        child: SafeArea(
-          child: CustomScrollView(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Aurora background
+          _buildAuroraBackground(),
+          // Main content
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildAppBar(),
+              _buildLiquidAppBar(),
               _buildStatsSection(),
-              _buildFilterChips(),
-              _buildAchievementsGrid(),
-              _buildBottomPadding(),
+              _buildFilterSection(),
+              _buildAchievementsList(),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAuroraBackground() {
+    return AnimatedBuilder(
+      animation: _auroraController,
+      builder: (context, child) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(
+                  colorScheme.background,
+                  colorScheme.primary.withOpacity(0.03),
+                  _auroraController.value,
+                )!,
+                colorScheme.background,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLiquidAppBar() {
     return SliverAppBar(
-      expandedHeight: 50,
-      floating: false,
       pinned: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      flexibleSpace: AnimatedBuilder(
-        animation: _headerAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 3 * (1 - _headerAnimation.value)),
-            child: Opacity(
-              opacity: _headerAnimation.value,
-              child: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF1A1A2E),
-                        Color(0xFF16213E),
-                        Color(0xFF0F3460),
-                      ],
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(
-                                Icons.arrow_back_ios,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                              ).createShader(bounds),
-                              child: Text(
-                                'Achievements',
-                                style: GoogleFonts.orbitron(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            Consumer<PortfolioProvider>(
-                              builder: (context, portfolio, child) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF00FFA3),
-                                        Color(0xFF00D4FF),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${portfolio.unlockedAchievements.length}/${AchievementService().getAllAchievements().length}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+      toolbarHeight: 100,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: LiquidMaterialTheme.darkSpaceBackground(
+                context,
+              ).withOpacity(0.5),
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
               ),
             ),
-          );
-        },
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.emoji_events_outlined,
+                    color: LiquidMaterialTheme.neonAccent(context),
+                    size: 28,
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Achievements',
+                    style: LiquidTextStyle.headlineMedium(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildStatsSection() {
     return SliverToBoxAdapter(
-      child: Consumer<PortfolioProvider>(
-        builder: (context, portfolio, child) {
-          final achievementService = AchievementService();
-          final allAchievements = achievementService.getAllAchievements();
-          final unlockedCount = portfolio.unlockedAchievements.length;
-          final totalCount = allAchievements.length;
-          final progress = totalCount > 0 ? unlockedCount / totalCount : 0.0;
-
-          return Container(
-            margin: const EdgeInsets.all(24),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.08),
-                  Colors.white.withOpacity(0.03),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
+      child: FadeTransition(
+        opacity: _headerAnimation,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Consumer<EnhancedPortfolioProvider>(
+            builder: (context, portfolio, child) {
+              return Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Unlocked',
+                      '${_getUnlockedCount()}',
+                      Icons.check_circle_outline,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total',
+                      '${_getTotalCount()}',
+                      Icons.emoji_events_outlined,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatCard(
                       'Progress',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      '$unlockedCount / $totalCount',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF00FFA3),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: progress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      '${_getProgressPercentage()}%',
+                      Icons.trending_up,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.star, color: const Color(0xFF00FFA3), size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Level ${portfolio.userLevel}: ${portfolio.getLevelTitle()}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return SliverToBoxAdapter(
-      child: Container(
-        height: 50,
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: _filters.length,
-          itemBuilder: (context, index) {
-            final filter = _filters[index];
-            final isSelected = _selectedFilter == filter;
-
-            return Container(
-              margin: const EdgeInsets.only(right: 12),
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedFilter = filter),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? const LinearGradient(
-                            colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                          )
-                        : null,
-                    color: isSelected ? null : Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? Colors.transparent
-                          : Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    filter,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.black : Colors.white70,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAchievementsGrid() {
-    return SliverToBoxAdapter(
-      child: Consumer<PortfolioProvider>(
-        builder: (context, portfolio, child) {
-          final achievementService = AchievementService();
-          final allAchievements = achievementService.getAllAchievements();
-
-          List<Achievement> filteredAchievements = allAchievements;
-          if (_selectedFilter != 'All') {
-            filteredAchievements = allAchievements
-                .where(
-                  (achievement) =>
-                      achievement.type
-                          .toString()
-                          .split('.')
-                          .last
-                          .toLowerCase() ==
-                      _selectedFilter.toLowerCase(),
-                )
-                .toList();
-          }
-
-          return Container(
-            margin: const EdgeInsets.all(24),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.8,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              itemCount: filteredAchievements.length,
-              itemBuilder: (context, index) {
-                final achievement = filteredAchievements[index];
-                final isUnlocked = portfolio.unlockedAchievements.contains(
-                  achievement.id,
-                );
-
-                return AnimatedBuilder(
-                  animation: _cardAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: 0.8 + (0.2 * _cardAnimation.value),
-                      child: Opacity(
-                        opacity: _cardAnimation.value,
-                        child: _buildAchievementCard(achievement, isUnlocked),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildAchievementCard(Achievement achievement, bool isUnlocked) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: isUnlocked
-            ? const LinearGradient(
-                colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.08),
-                  Colors.white.withOpacity(0.03),
                 ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isUnlocked
-              ? const Color(0xFF00FFA3).withOpacity(0.5)
-              : Colors.white.withOpacity(0.15),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isUnlocked
-                ? const Color(0xFF00FFA3).withOpacity(0.2)
-                : Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            spreadRadius: 0,
-            offset: const Offset(0, 2),
+              );
+            },
           ),
-        ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon and rarity
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isUnlocked
-                      ? Colors.white.withOpacity(0.2)
-                      : const Color(0xFF00FFA3).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(
-                    achievement.icon,
-                    style: const TextStyle(fontSize: 20),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon) {
+    return LiquidCard(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: LiquidMaterialTheme.neonAccent(context),
+              size: 24,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: LiquidTextStyle.titleLarge(context),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: LiquidTextStyle.bodyMedium(context),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterSection() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _filters.map((filter) {
+              final isSelected = _selectedFilter == filter;
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedFilter = filter),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? LiquidMaterialTheme.neonAccent(context)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? LiquidMaterialTheme.neonAccent(context)
+                            : Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      filter,
+                      style: LiquidTextStyle.bodyMedium(context).copyWith(
+                        color: isSelected
+                            ? LiquidMaterialTheme.darkSpaceBackground(context)
+                            : Colors.white70,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
                   ),
                 ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementsList() {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final achievement = _getFilteredAchievements()[index];
+          return FadeTransition(
+            opacity: _cardAnimation,
+            child: SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0, 0.3),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _cardAnimationController,
+                      curve: Interval(
+                        index * 0.1,
+                        1.0,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                  ),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildAchievementCard(achievement),
               ),
-              const Spacer(),
+            ),
+          );
+        }, childCount: _getFilteredAchievements().length),
+      ),
+    );
+  }
+
+  Widget _buildAchievementCard(Achievement achievement) {
+    return LiquidCard(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: achievement.isUnlocked
+                      ? [
+                          LiquidMaterialTheme.neonAccent(context),
+                          LiquidMaterialTheme.neonAccent(
+                            context,
+                          ).withOpacity(0.7),
+                        ]
+                      : [
+                          Colors.grey.withOpacity(0.3),
+                          Colors.grey.withOpacity(0.1),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: achievement.isUnlocked
+                    ? [
+                        BoxShadow(
+                          color: LiquidMaterialTheme.neonAccent(
+                            context,
+                          ).withOpacity(0.3),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  achievement.icon,
+                  style: const TextStyle(fontSize: 24),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    achievement.title,
+                    style: LiquidTextStyle.titleMedium(context).copyWith(
+                      color: achievement.isUnlocked
+                          ? Colors.white
+                          : Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    achievement.description,
+                    style: LiquidTextStyle.bodyMedium(context).copyWith(
+                      color: achievement.isUnlocked
+                          ? Colors.white70
+                          : Colors.grey,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (achievement.isUnlocked) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${achievement.xpReward} XP',
+                          style: LiquidTextStyle.labelSmall(
+                            context,
+                          ).copyWith(color: Colors.amber),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (achievement.isUnlocked)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: isUnlocked
-                      ? Colors.white.withOpacity(0.2)
-                      : _getRarityColor(achievement.rarity).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
+                  color: LiquidMaterialTheme.neonAccent(
+                    context,
+                  ).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  achievement.rarity.toString().split('.').last,
-                  style: GoogleFonts.inter(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w600,
-                    color: isUnlocked
-                        ? Colors.white
-                        : _getRarityColor(achievement.rarity),
+                  'UNLOCKED',
+                  style: LiquidTextStyle.labelSmall(context).copyWith(
+                    color: LiquidMaterialTheme.neonAccent(context),
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Title
-          Text(
-            achievement.title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isUnlocked ? Colors.white : Colors.white,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-
-          // Description
-          Text(
-            achievement.description,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: isUnlocked ? Colors.white70 : Colors.white60,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
-
-          // XP reward
-          Row(
-            children: [
-              Icon(
-                Icons.star,
-                color: isUnlocked ? Colors.white : const Color(0xFF00FFA3),
-                size: 14,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '+${achievement.xpReward} XP',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isUnlocked ? Colors.white : const Color(0xFF00FFA3),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Color _getRarityColor(AchievementRarity rarity) {
-    switch (rarity) {
-      case AchievementRarity.common:
-        return Colors.grey;
-      case AchievementRarity.uncommon:
-        return const Color(0xFF4CAF50);
-      case AchievementRarity.rare:
-        return const Color(0xFF00D4FF);
-      case AchievementRarity.epic:
-        return const Color(0xFF9C27B0);
-      case AchievementRarity.legendary:
-        return const Color(0xFFFFD700);
+  List<Achievement> _getFilteredAchievements() {
+    final allAchievements = _getAllAchievements();
+    if (_selectedFilter == 'All') {
+      return allAchievements;
     }
+    return allAchievements.where((achievement) {
+      return achievement.type.name.toLowerCase() ==
+          _selectedFilter.toLowerCase();
+    }).toList();
   }
 
-  Widget _buildBottomPadding() {
-    return const SliverToBoxAdapter(child: SizedBox(height: 100));
+  List<Achievement> _getAllAchievements() {
+    return [
+      Achievement(
+        id: '1',
+        title: 'First Trade',
+        description: 'Complete your first trade',
+        icon: '📈',
+        type: AchievementType.trading,
+        rarity: AchievementRarity.common,
+        xpReward: 100,
+        requirements: ['Complete first trade'],
+        isUnlocked: true,
+      ),
+      Achievement(
+        id: '2',
+        title: 'Portfolio Master',
+        description: 'Reach \$100K portfolio value',
+        icon: '💰',
+        type: AchievementType.trading,
+        rarity: AchievementRarity.rare,
+        xpReward: 500,
+        requirements: ['Reach \$100K portfolio value'],
+        isUnlocked: false,
+      ),
+      Achievement(
+        id: '3',
+        title: 'Risk Taker',
+        description: 'Make 10 high-risk trades',
+        icon: '⚠️',
+        type: AchievementType.trading,
+        rarity: AchievementRarity.uncommon,
+        xpReward: 300,
+        requirements: ['Make 10 high-risk trades'],
+        isUnlocked: false,
+      ),
+      Achievement(
+        id: '4',
+        title: 'Learning Champion',
+        description: 'Complete 5 learning modules',
+        icon: '🎓',
+        type: AchievementType.learning,
+        rarity: AchievementRarity.uncommon,
+        xpReward: 200,
+        requirements: ['Complete 5 learning modules'],
+        isUnlocked: true,
+      ),
+      Achievement(
+        id: '5',
+        title: 'Social Butterfly',
+        description: 'Share your first portfolio',
+        icon: '📤',
+        type: AchievementType.social,
+        rarity: AchievementRarity.common,
+        xpReward: 150,
+        requirements: ['Share first portfolio'],
+        isUnlocked: false,
+      ),
+      Achievement(
+        id: '6',
+        title: 'Special Achievement',
+        description: 'Complete a special challenge',
+        icon: '🏆',
+        type: AchievementType.special,
+        rarity: AchievementRarity.legendary,
+        xpReward: 1000,
+        requirements: ['Complete special challenge'],
+        isUnlocked: false,
+      ),
+    ];
+  }
+
+  int _getUnlockedCount() {
+    return _getAllAchievements()
+        .where((achievement) => achievement.isUnlocked)
+        .length;
+  }
+
+  int _getTotalCount() {
+    return _getAllAchievements().length;
+  }
+
+  int _getProgressPercentage() {
+    if (_getTotalCount() == 0) return 0;
+    return ((_getUnlockedCount() / _getTotalCount()) * 100).round();
   }
 }

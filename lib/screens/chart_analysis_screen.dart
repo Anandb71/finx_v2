@@ -1,7 +1,11 @@
+// lib/screens/chart_analysis_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../services/portfolio_provider.dart';
+import 'dart:ui';
+import 'dart:math' as math;
+import '../theme/liquid_material_theme.dart';
+import '../widgets/liquid_card.dart';
+import '../utils/liquid_text_style.dart';
 
 class ChartAnalysisScreen extends StatefulWidget {
   const ChartAnalysisScreen({super.key});
@@ -12,125 +16,281 @@ class ChartAnalysisScreen extends StatefulWidget {
 
 class _ChartAnalysisScreenState extends State<ChartAnalysisScreen>
     with TickerProviderStateMixin {
-  late AnimationController _headerAnimationController;
-  late AnimationController _cardAnimationController;
-  late AnimationController _chartAnimationController;
-  late AnimationController _glowAnimationController;
-
-  late Animation<double> _headerAnimation;
-  late Animation<double> _cardAnimation;
-  late Animation<double> _chartAnimation;
-  late Animation<double> _glowAnimation;
+  late AnimationController _auroraController;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   String _selectedTimeframe = '1D';
-  String _selectedIndicator = 'SMA';
-  String _selectedStock = 'AAPL';
-  bool _showVolume = true;
-  bool _showIndicators = true;
+  String _selectedIndicator = 'RSI';
+  List<Map<String, dynamic>> _chartData = [];
+  Map<String, dynamic> _analysisResults = {};
 
   final List<String> _timeframes = ['1D', '1W', '1M', '3M', '6M', '1Y'];
   final List<String> _indicators = [
-    'SMA',
-    'EMA',
     'RSI',
     'MACD',
+    'SMA',
+    'EMA',
     'Bollinger Bands',
-  ];
-  final List<Map<String, dynamic>> _stocks = [
-    {'symbol': 'AAPL', 'name': 'Apple Inc.', 'price': 150.0, 'change': 2.5},
-    {
-      'symbol': 'GOOGL',
-      'name': 'Alphabet Inc.',
-      'price': 2800.0,
-      'change': -1.2,
-    },
-    {
-      'symbol': 'MSFT',
-      'name': 'Microsoft Corp.',
-      'price': 300.0,
-      'change': 1.8,
-    },
-    {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'price': 800.0, 'change': -3.5},
-    {
-      'symbol': 'AMZN',
-      'name': 'Amazon.com Inc.',
-      'price': 3200.0,
-      'change': 0.9,
-    },
   ];
 
   @override
   void initState() {
     super.initState();
-
-    _headerAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    _cardAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    _chartAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    );
-
-    _glowAnimationController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
-
-    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _headerAnimationController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
-    _cardAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _cardAnimationController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
-    _chartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _chartAnimationController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
-    _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _glowAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _startAnimations();
+    _setupAnimations();
+    _generateChartData();
+    _performAnalysis();
   }
 
-  void _startAnimations() {
-    _headerAnimationController.forward();
-    Future.delayed(const Duration(milliseconds: 200), () {
-      _cardAnimationController.forward();
+  void _setupAnimations() {
+    _auroraController = AnimationController(
+      duration: const Duration(seconds: 20),
+      vsync: this,
+    )..repeat();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  void _generateChartData() {
+    final random = math.Random();
+    final data = <Map<String, dynamic>>[];
+    double basePrice = 150.0;
+    final now = DateTime.now();
+
+    int days = _getDaysForTimeframe(_selectedTimeframe);
+
+    for (int i = days; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final volatility = 0.02 + (random.nextDouble() * 0.03);
+      final change = (random.nextDouble() - 0.5) * volatility;
+      basePrice *= (1 + change);
+
+      data.add({
+        'date': date,
+        'open': basePrice * (0.99 + random.nextDouble() * 0.02),
+        'high': basePrice * (1.01 + random.nextDouble() * 0.02),
+        'low': basePrice * (0.98 + random.nextDouble() * 0.02),
+        'close': basePrice,
+        'volume': 1000000 + random.nextInt(500000),
+      });
+    }
+
+    setState(() {
+      _chartData = data;
     });
-    Future.delayed(const Duration(milliseconds: 400), () {
-      _chartAnimationController.forward();
+  }
+
+  int _getDaysForTimeframe(String timeframe) {
+    switch (timeframe) {
+      case '1D':
+        return 1;
+      case '1W':
+        return 7;
+      case '1M':
+        return 30;
+      case '3M':
+        return 90;
+      case '6M':
+        return 180;
+      case '1Y':
+        return 365;
+      default:
+        return 30;
+    }
+  }
+
+  void _performAnalysis() {
+    if (_chartData.isEmpty) return;
+
+    final prices = _chartData.map((d) => d['close'] as double).toList();
+    final volumes = _chartData.map((d) => d['volume'] as int).toList();
+
+    final currentPrice = prices.last;
+    final previousPrice = prices.length > 1
+        ? prices[prices.length - 2]
+        : currentPrice;
+    final priceChange = currentPrice - previousPrice;
+    final priceChangePercent = (priceChange / previousPrice) * 100;
+
+    // Calculate RSI
+    final rsi = _calculateRSI(prices);
+
+    // Calculate MACD
+    final macd = _calculateMACD(prices);
+
+    // Calculate moving averages
+    final sma20 = _calculateSMA(prices, 20);
+    final sma50 = _calculateSMA(prices, 50);
+
+    // Calculate Bollinger Bands
+    final bollinger = _calculateBollingerBands(prices, 20);
+
+    // Calculate volume analysis
+    final avgVolume = volumes.reduce((a, b) => a + b) / volumes.length;
+    final currentVolume = volumes.last;
+    final volumeRatio = currentVolume / avgVolume;
+
+    // Determine trend
+    String trend = 'Neutral';
+    if (sma20 > sma50 && currentPrice > sma20) {
+      trend = 'Bullish';
+    } else if (sma20 < sma50 && currentPrice < sma20) {
+      trend = 'Bearish';
+    }
+
+    // Generate signals
+    List<String> signals = [];
+    if (rsi < 30) signals.add('Oversold');
+    if (rsi > 70) signals.add('Overbought');
+    if (macd['macd']! > macd['signal']!) signals.add('MACD Bullish');
+    if (macd['macd']! < macd['signal']!) signals.add('MACD Bearish');
+    if (currentPrice > bollinger['upper']!) signals.add('Above Upper Band');
+    if (currentPrice < bollinger['lower']!) signals.add('Below Lower Band');
+    if (volumeRatio > 1.5) signals.add('High Volume');
+
+    setState(() {
+      _analysisResults = {
+        'currentPrice': currentPrice,
+        'priceChange': priceChange,
+        'priceChangePercent': priceChangePercent,
+        'rsi': rsi,
+        'macd': macd,
+        'sma20': sma20,
+        'sma50': sma50,
+        'bollinger': bollinger,
+        'trend': trend,
+        'signals': signals,
+        'volumeRatio': volumeRatio,
+        'support': _findSupport(prices),
+        'resistance': _findResistance(prices),
+      };
     });
-    _glowAnimationController.repeat(reverse: true);
+  }
+
+  double _calculateRSI(List<double> prices) {
+    if (prices.length < 14) return 50.0;
+
+    double gain = 0;
+    double loss = 0;
+
+    for (int i = 1; i < 15; i++) {
+      final change = prices[i] - prices[i - 1];
+      if (change > 0) {
+        gain += change;
+      } else {
+        loss -= change;
+      }
+    }
+
+    final avgGain = gain / 14;
+    final avgLoss = loss / 14;
+
+    if (avgLoss == 0) return 100.0;
+
+    final rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+  }
+
+  Map<String, double> _calculateMACD(List<double> prices) {
+    if (prices.length < 26) return {'macd': 0, 'signal': 0, 'histogram': 0};
+
+    final ema12 = _calculateEMA(prices, 12);
+    final ema26 = _calculateEMA(prices, 26);
+    final macd = ema12 - ema26;
+
+    // Simplified signal line (9-period EMA of MACD)
+    final signal = macd * 0.9; // Simplified calculation
+    final histogram = macd - signal;
+
+    return {'macd': macd, 'signal': signal, 'histogram': histogram};
+  }
+
+  double _calculateEMA(List<double> prices, int period) {
+    if (prices.length < period) return prices.last;
+
+    final multiplier = 2.0 / (period + 1);
+    double ema = prices.take(period).reduce((a, b) => a + b) / period;
+
+    for (int i = period; i < prices.length; i++) {
+      ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+    }
+
+    return ema;
+  }
+
+  double _calculateSMA(List<double> prices, int period) {
+    if (prices.length < period) return prices.last;
+
+    final sum = prices.skip(prices.length - period).reduce((a, b) => a + b);
+    return sum / period;
+  }
+
+  Map<String, double> _calculateBollingerBands(
+    List<double> prices,
+    int period,
+  ) {
+    if (prices.length < period) {
+      final price = prices.last;
+      return {'upper': price, 'middle': price, 'lower': price};
+    }
+
+    final sma = _calculateSMA(prices, period);
+    final recentPrices = prices.skip(prices.length - period);
+
+    double variance = 0;
+    for (final price in recentPrices) {
+      variance += math.pow(price - sma, 2);
+    }
+    variance /= period;
+
+    final stdDev = math.sqrt(variance);
+    final upper = sma + (2 * stdDev);
+    final lower = sma - (2 * stdDev);
+
+    return {'upper': upper, 'middle': sma, 'lower': lower};
+  }
+
+  double _findSupport(List<double> prices) {
+    if (prices.length < 10) return prices.last;
+
+    final recentPrices = prices.skip(prices.length - 10);
+    return recentPrices.reduce((a, b) => a < b ? a : b);
+  }
+
+  double _findResistance(List<double> prices) {
+    if (prices.length < 10) return prices.last;
+
+    final recentPrices = prices.skip(prices.length - 10);
+    return recentPrices.reduce((a, b) => a > b ? a : b);
   }
 
   @override
   void dispose() {
-    _headerAnimationController.dispose();
-    _cardAnimationController.dispose();
-    _chartAnimationController.dispose();
-    _glowAnimationController.dispose();
+    _auroraController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
@@ -138,359 +298,198 @@ class _ChartAnalysisScreenState extends State<ChartAnalysisScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0A0A0A),
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
+      body: Stack(
+        children: [
+          _buildAuroraBackground(),
+          CustomScrollView(
+            slivers: [
+              _buildLiquidAppBar(),
+              _buildTimeframeSelector(),
+              _buildChart(),
+              _buildAnalysisResults(),
+              _buildTechnicalIndicators(),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
-            stops: [0.0, 0.3, 0.7, 1.0],
           ),
-        ),
-        child: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(),
-            _buildControlsSection(),
-            _buildMainChart(),
-            _buildTechnicalIndicators(),
-            _buildAnalysisInsights(),
-            _buildBottomPadding(),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 80,
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: AnimatedBuilder(
-        animation: _headerAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 20 * (1 - _headerAnimation.value)),
-            child: Opacity(
-              opacity: _headerAnimation.value,
-              child: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF1A1A2E),
-                        Color(0xFF16213E),
-                        Color(0xFF0F3460),
-                      ],
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Animated background particles
-                      ...List.generate(
-                        12,
-                        (index) => _buildFloatingParticle(index),
-                      ),
-
-                      // Main content
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  icon: const Icon(
-                                    Icons.arrow_back_ios,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ShaderMask(
-                                  shaderCallback: (bounds) =>
-                                      const LinearGradient(
-                                        colors: [
-                                          Color(0xFFFFD700),
-                                          Color(0xFFFFA500),
-                                        ],
-                                      ).createShader(bounds),
-                                  child: Text(
-                                    'Chart Analysis',
-                                    style: GoogleFonts.orbitron(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                AnimatedBuilder(
-                                  animation: _glowAnimation,
-                                  builder: (context, child) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            const Color(
-                                              0xFFFFD700,
-                                            ).withOpacity(_glowAnimation.value),
-                                            const Color(
-                                              0xFFFFA500,
-                                            ).withOpacity(_glowAnimation.value),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFFFFD700)
-                                                .withOpacity(
-                                                  0.3 * _glowAnimation.value,
-                                                ),
-                                            blurRadius:
-                                                15 * _glowAnimation.value,
-                                            spreadRadius:
-                                                2 * _glowAnimation.value,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        'ANALYSIS',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFloatingParticle(int index) {
-    final random = (index * 1.3) % 1.0;
-    final size = 2.0 + (random * 4.0);
-    final left = 20.0 + (random * 300.0);
-    final top = 20.0 + (random * 80.0);
-    final opacity = 0.2 + (random * 0.6);
-
+  Widget _buildAuroraBackground() {
     return AnimatedBuilder(
-      animation: _glowAnimation,
+      animation: _auroraController,
       builder: (context, child) {
-        final animationValue = (_glowAnimation.value + random) % 1.0;
-        return Positioned(
-          left: left + (40 * (animationValue - 0.5)),
-          top: top + (30 * (animationValue - 0.5)),
-          child: Opacity(
-            opacity: opacity * (1 - animationValue),
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFFD700).withOpacity(0.5),
-                    blurRadius: 6,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return CustomPaint(
+          size: Size.infinite,
+          painter: AuroraPainter(_auroraController.value),
         );
       },
     );
   }
 
-  Widget _buildControlsSection() {
+  Widget _buildLiquidAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1A1A2E).withOpacity(0.8),
+                  const Color(0xFF16213E).withOpacity(0.6),
+                  const Color(0xFF0F3460).withOpacity(0.4),
+                ],
+              ),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Text(
+                    'Chart Analysis',
+                    style: LiquidTextStyle.headlineMedium(
+                      context,
+                    ).copyWith(color: Colors.white, fontSize: 28),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Technical analysis and market insights',
+                    style: LiquidTextStyle.bodyMedium(
+                      context,
+                    ).copyWith(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeframeSelector() {
     return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _cardAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 30 * (1 - _cardAnimation.value)),
-            child: Opacity(
-              opacity: _cardAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFFFFD700).withOpacity(0.3),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFFD700).withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: LiquidCard(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildControlDropdown(
-                            'Stock',
-                            _selectedStock,
-                            _stocks.map((s) => s['symbol'] as String).toList(),
-                            (value) => setState(() => _selectedStock = value),
-                            const Color(0xFF00FFA3),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildControlDropdown(
-                            'Timeframe',
-                            _selectedTimeframe,
-                            _timeframes,
-                            (value) =>
-                                setState(() => _selectedTimeframe = value),
-                            const Color(0xFF00D4FF),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Timeframe & Indicators',
+                      style: LiquidTextStyle.titleLarge(
+                        context,
+                      ).copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildSelectorRow(
+                      'Timeframe',
+                      _timeframes,
+                      _selectedTimeframe,
+                      (value) {
+                        setState(() {
+                          _selectedTimeframe = value;
+                          _generateChartData();
+                          _performAnalysis();
+                        });
+                      },
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildControlDropdown(
-                            'Indicator',
-                            _selectedIndicator,
-                            _indicators,
-                            (value) =>
-                                setState(() => _selectedIndicator = value),
-                            const Color(0xFF9C27B0),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _buildToggleSwitch(
-                                  'Volume',
-                                  _showVolume,
-                                  (value) =>
-                                      setState(() => _showVolume = value),
-                                  const Color(0xFFFF6B6B),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildToggleSwitch(
-                                  'Indicators',
-                                  _showIndicators,
-                                  (value) =>
-                                      setState(() => _showIndicators = value),
-                                  const Color(0xFFFFD700),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    _buildSelectorRow(
+                      'Indicator',
+                      _indicators,
+                      _selectedIndicator,
+                      (value) {
+                        setState(() {
+                          _selectedIndicator = value;
+                        });
+                      },
                     ),
                   ],
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildControlDropdown(
-    String label,
-    String value,
+  Widget _buildSelectorRow(
+    String title,
     List<String> options,
-    Function(String) onChanged,
-    Color color,
+    String selected,
+    ValueChanged<String> onChanged,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white70,
-          ),
+          title,
+          style: LiquidTextStyle.bodyLarge(
+            context,
+          ).copyWith(color: Colors.white70),
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.3), width: 1),
-          ),
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            underline: const SizedBox(),
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            dropdownColor: const Color(0xFF1A1A2E),
-            items: options.map((String option) {
-              return DropdownMenuItem<String>(
-                value: option,
-                child: Text(option),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 40,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: options.length,
+            itemBuilder: (context, index) {
+              final option = options[index];
+              final isSelected = option == selected;
+
+              return GestureDetector(
+                onTap: () => onChanged(option),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: isSelected
+                        ? const LinearGradient(
+                            colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
+                          )
+                        : null,
+                    color: isSelected ? null : Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF00FFA3)
+                          : Colors.white.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      option,
+                      style: LiquidTextStyle.bodyMedium(context).copyWith(
+                        color: isSelected ? Colors.white : Colors.white70,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
               );
-            }).toList(),
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                onChanged(newValue);
-              }
             },
           ),
         ),
@@ -498,573 +497,459 @@ class _ChartAnalysisScreenState extends State<ChartAnalysisScreen>
     );
   }
 
-  Widget _buildToggleSwitch(
-    String label,
-    bool value,
-    Function(bool) onChanged,
-    Color color,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white70,
-          ),
-        ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () => onChanged(!value),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 50,
-            height: 25,
-            decoration: BoxDecoration(
-              color: value ? color : Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12.5),
-            ),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 200),
-              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: 20,
-                height: 20,
-                margin: const EdgeInsets.all(2.5),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+  Widget _buildChart() {
+    if (_chartData.isEmpty) return const SliverToBoxAdapter(child: SizedBox());
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LiquidCard(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Price Chart',
+                      style: LiquidTextStyle.titleLarge(
+                        context,
+                      ).copyWith(color: Colors.white),
+                    ),
+                    if (_analysisResults.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getTrendColor(
+                            _analysisResults['trend'],
+                          ).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _analysisResults['trend'],
+                          style: LiquidTextStyle.bodyMedium(context).copyWith(
+                            color: _getTrendColor(_analysisResults['trend']),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 300,
+                  child: CustomPaint(
+                    size: const Size(double.infinity, 300),
+                    painter: ChartAnalysisPainter(_chartData, _analysisResults),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildMainChart() {
+  Widget _buildAnalysisResults() {
+    if (_analysisResults.isEmpty)
+      return const SliverToBoxAdapter(child: SizedBox());
+
     return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _chartAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 30 * (1 - _chartAnimation.value)),
-            child: Opacity(
-              opacity: _chartAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF00D4FF).withOpacity(0.3),
-                    width: 1,
-                  ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LiquidCard(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Analysis Results',
+                  style: LiquidTextStyle.titleLarge(
+                    context,
+                  ).copyWith(color: Colors.white),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 20),
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Price Chart - $_selectedStock',
-                          style: GoogleFonts.orbitron(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '\$${_getCurrentPrice().toStringAsFixed(2)}',
-                          style: GoogleFonts.orbitron(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF00FFA3),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      height: 300,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF00D4FF).withOpacity(0.2),
-                          width: 1,
-                        ),
+                    Expanded(
+                      child: _buildAnalysisCard(
+                        'Current Price',
+                        '\$${_analysisResults['currentPrice'].toStringAsFixed(2)}',
+                        _analysisResults['priceChange'] >= 0
+                            ? Colors.green
+                            : Colors.red,
+                        Icons.trending_up,
                       ),
-                      child: CustomPaint(
-                        painter: AdvancedChartPainter(
-                          data: _getChartData(),
-                          showVolume: _showVolume,
-                          showIndicators: _showIndicators,
-                          indicator: _selectedIndicator,
-                        ),
-                        size: Size.infinite,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildAnalysisCard(
+                        'Change',
+                        '${_analysisResults['priceChangePercent'].toStringAsFixed(2)}%',
+                        _analysisResults['priceChange'] >= 0
+                            ? Colors.green
+                            : Colors.red,
+                        Icons.show_chart,
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildAnalysisCard(
+                        'RSI',
+                        _analysisResults['rsi'].toStringAsFixed(1),
+                        _getRSIColor(_analysisResults['rsi']),
+                        Icons.speed,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildAnalysisCard(
+                        'Volume Ratio',
+                        '${_analysisResults['volumeRatio'].toStringAsFixed(1)}x',
+                        _analysisResults['volumeRatio'] > 1.5
+                            ? Colors.orange
+                            : Colors.blue,
+                        Icons.volume_up,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildTechnicalIndicators() {
+    if (_analysisResults.isEmpty)
+      return const SliverToBoxAdapter(child: SizedBox());
+
     return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _cardAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 20 * (1 - _cardAnimation.value)),
-            child: Opacity(
-              opacity: _cardAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF9C27B0).withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Technical Indicators',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 2.5,
-                          ),
-                      itemCount: _getIndicatorData().length,
-                      itemBuilder: (context, index) {
-                        final indicator = _getIndicatorData()[index];
-                        return _buildIndicatorCard(indicator);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildIndicatorCard(Map<String, dynamic> indicator) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            (indicator['color'] as Color).withOpacity(0.2),
-            (indicator['color'] as Color).withOpacity(0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: (indicator['color'] as Color).withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            indicator['name'] as String,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.white70,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            indicator['value'] as String,
-            style: GoogleFonts.orbitron(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: indicator['color'] as Color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            indicator['signal'] as String,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              color: (indicator['signalColor'] as Color),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalysisInsights() {
-    return SliverToBoxAdapter(
-      child: AnimatedBuilder(
-        animation: _cardAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 20 * (1 - _cardAnimation.value)),
-            child: Opacity(
-              opacity: _cardAnimation.value,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF00FFA3).withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Analysis Insights',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ..._getAnalysisInsights().map(
-                      (insight) => _buildInsightItem(insight),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildInsightItem(Map<String, dynamic> insight) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: (insight['color'] as Color).withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: (insight['color'] as Color).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              insight['icon'] as IconData,
-              color: insight['color'] as Color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LiquidCard(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  insight['title'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                  'Technical Signals',
+                  style: LiquidTextStyle.titleLarge(
+                    context,
+                  ).copyWith(color: Colors.white),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: (_analysisResults['signals'] as List<String>).map((
+                    signal,
+                  ) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getSignalColor(signal).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _getSignalColor(signal).withOpacity(0.5),
+                        ),
+                      ),
+                      child: Text(
+                        signal,
+                        style: LiquidTextStyle.bodyMedium(context).copyWith(
+                          color: _getSignalColor(signal),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
                 Text(
-                  insight['description'] as String,
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
+                  'Key Levels',
+                  style: LiquidTextStyle.titleMedium(
+                    context,
+                  ).copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildLevelCard(
+                        'Support',
+                        '\$${_analysisResults['support'].toStringAsFixed(2)}',
+                        Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildLevelCard(
+                        'Resistance',
+                        '\$${_analysisResults['resistance'].toStringAsFixed(2)}',
+                        Colors.red,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalysisCard(
+    String title,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: LiquidTextStyle.titleMedium(
+              context,
+            ).copyWith(color: color, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            title,
+            style: LiquidTextStyle.bodyMedium(
+              context,
+            ).copyWith(color: Colors.white60, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomPadding() {
-    return const SliverToBoxAdapter(child: SizedBox(height: 100));
+  Widget _buildLevelCard(String title, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F0F0F),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: LiquidTextStyle.bodyMedium(
+              context,
+            ).copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: LiquidTextStyle.titleMedium(
+              context,
+            ).copyWith(color: color, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
   }
 
-  double _getCurrentPrice() {
-    final stock = _stocks.firstWhere((s) => s['symbol'] == _selectedStock);
-    return stock['price'] as double;
-  }
-
-  List<double> _getChartData() {
-    final portfolio = context.read<PortfolioProvider>();
-    final history = portfolio.portfolioValueHistory;
-
-    if (history.isEmpty) {
-      // Return starting value if no history
-      return [100000.0];
+  Color _getTrendColor(String trend) {
+    switch (trend) {
+      case 'Bullish':
+        return Colors.green;
+      case 'Bearish':
+        return Colors.red;
+      default:
+        return Colors.orange;
     }
-
-    // Convert portfolio value history to chart data
-    return history.map((point) => point.value).toList();
   }
 
-  List<Map<String, dynamic>> _getIndicatorData() {
-    return [
-      {
-        'name': 'RSI',
-        'value': '65.4',
-        'signal': 'Neutral',
-        'signalColor': const Color(0xFFFFD700),
-        'color': const Color(0xFFFFD700),
-      },
-      {
-        'name': 'MACD',
-        'value': '2.1',
-        'signal': 'Bullish',
-        'signalColor': const Color(0xFF00FFA3),
-        'color': const Color(0xFF00FFA3),
-      },
-      {
-        'name': 'SMA(20)',
-        'value': '142.5',
-        'signal': 'Above',
-        'signalColor': const Color(0xFF00FFA3),
-        'color': const Color(0xFF00D4FF),
-      },
-      {
-        'name': 'Volume',
-        'value': '2.4M',
-        'signal': 'High',
-        'signalColor': const Color(0xFFFF6B6B),
-        'color': const Color(0xFFFF6B6B),
-      },
-    ];
+  Color _getRSIColor(double rsi) {
+    if (rsi > 70) return Colors.red;
+    if (rsi < 30) return Colors.green;
+    return Colors.orange;
   }
 
-  List<Map<String, dynamic>> _getAnalysisInsights() {
-    return [
-      {
-        'title': 'Trend Analysis',
-        'description': 'Price is above 20-day SMA, indicating bullish momentum',
-        'icon': Icons.trending_up,
-        'color': const Color(0xFF00FFA3),
-      },
-      {
-        'title': 'Volume Confirmation',
-        'description': 'High volume supports the current price movement',
-        'icon': Icons.bar_chart,
-        'color': const Color(0xFF00D4FF),
-      },
-      {
-        'title': 'RSI Level',
-        'description': 'RSI at 65.4 suggests the stock is not overbought yet',
-        'icon': Icons.speed,
-        'color': const Color(0xFFFFD700),
-      },
-      {
-        'title': 'Support Level',
-        'description': 'Strong support at \$140 level, watch for bounce',
-        'icon': Icons.support,
-        'color': const Color(0xFF9C27B0),
-      },
-    ];
+  Color _getSignalColor(String signal) {
+    if (signal.contains('Bullish') || signal.contains('Oversold'))
+      return Colors.green;
+    if (signal.contains('Bearish') || signal.contains('Overbought'))
+      return Colors.red;
+    if (signal.contains('High Volume')) return Colors.orange;
+    return Colors.blue;
   }
 }
 
-class AdvancedChartPainter extends CustomPainter {
-  final List<double> data;
-  final bool showVolume;
-  final bool showIndicators;
-  final String indicator;
+class AuroraPainter extends CustomPainter {
+  final double animationValue;
 
-  AdvancedChartPainter({
-    required this.data,
-    required this.showVolume,
-    required this.showIndicators,
-    required this.indicator,
-  });
+  AuroraPainter(this.animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.isEmpty) return;
-
     final paint = Paint()
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final fillPaint = Paint()
       ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
         colors: [
-          const Color(0xFF00D4FF).withOpacity(0.3),
-          const Color(0xFF00D4FF).withOpacity(0.0),
+          const Color(0xFF1A1A2E).withOpacity(0.03),
+          const Color(0xFF16213E).withOpacity(0.05),
+          const Color(0xFF0F3460).withOpacity(0.03),
         ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
+        stops: [
+          0.0 + (animationValue * 0.1),
+          0.5 + (animationValue * 0.2),
+          1.0 + (animationValue * 0.1),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    // Calculate price range
-    final minValue = data.reduce((a, b) => a < b ? a : b);
-    final maxValue = data.reduce((a, b) => a > b ? a : b);
-    final range = maxValue - minValue;
-    final padding = range * 0.1;
-    final adjustedMin = minValue - padding;
-    final adjustedMax = maxValue + padding;
-    final adjustedRange = adjustedMax - adjustedMin;
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+  }
 
-    final getY = (double price) =>
-        size.height - ((price - adjustedMin) / adjustedRange) * size.height;
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
 
-    // Draw main price line
-    paint.color = const Color(0xFF00D4FF);
+class ChartAnalysisPainter extends CustomPainter {
+  final List<Map<String, dynamic>> chartData;
+  final Map<String, dynamic> analysisResults;
+
+  ChartAnalysisPainter(this.chartData, this.analysisResults);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (chartData.length < 2) return;
+
+    final prices = chartData.map((d) => d['close'] as double).toList();
+    final maxPrice = prices.reduce((a, b) => a > b ? a : b);
+    final minPrice = prices.reduce((a, b) => a < b ? a : b);
+    final priceRange = maxPrice - minPrice;
+
+    if (priceRange == 0) return;
+
+    // Draw grid lines
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.1)
+      ..strokeWidth = 1;
+
+    for (int i = 0; i <= 4; i++) {
+      final y = (size.height / 4) * i;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    // Draw price line
+    final linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = const Color(0xFF00FFA3);
+
     final path = Path();
-    final fillPath = Path();
-
-    final stepX = size.width / (data.length - 1);
-
-    for (int i = 0; i < data.length; i++) {
-      final x = i * stepX;
-      final y = getY(data[i]);
+    for (int i = 0; i < prices.length; i++) {
+      final x = (i / (prices.length - 1)) * size.width;
+      final y =
+          size.height - ((prices[i] - minPrice) / priceRange) * size.height;
 
       if (i == 0) {
         path.moveTo(x, y);
-        fillPath.moveTo(x, size.height);
-        fillPath.lineTo(x, y);
       } else {
         path.lineTo(x, y);
-        fillPath.lineTo(x, y);
       }
     }
 
-    fillPath.lineTo(size.width, size.height);
-    fillPath.close();
+    canvas.drawPath(path, linePaint);
 
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paint);
+    // Draw moving averages if available
+    if (analysisResults.isNotEmpty) {
+      final sma20 = analysisResults['sma20'] as double;
+      final sma50 = analysisResults['sma50'] as double;
 
-    // Draw moving average if enabled
-    if (showIndicators && indicator == 'SMA') {
-      paint.color = const Color(0xFFFFD700);
-      paint.strokeWidth = 1.5;
+      // SMA 20
+      final sma20Paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = Colors.blue.withOpacity(0.7);
 
-      final smaData = _calculateSMA(data, 5);
-      final smaPath = Path();
+      final sma20Y =
+          size.height - ((sma20 - minPrice) / priceRange) * size.height;
+      canvas.drawLine(
+        Offset(0, sma20Y),
+        Offset(size.width, sma20Y),
+        sma20Paint,
+      );
 
-      for (int i = 0; i < smaData.length; i++) {
-        final x = (i + 4) * stepX; // Offset for SMA calculation
-        final y = getY(smaData[i]);
+      // SMA 50
+      final sma50Paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = Colors.orange.withOpacity(0.7);
 
-        if (i == 0) {
-          smaPath.moveTo(x, y);
-        } else {
-          smaPath.lineTo(x, y);
-        }
-      }
-
-      canvas.drawPath(smaPath, paint);
+      final sma50Y =
+          size.height - ((sma50 - minPrice) / priceRange) * size.height;
+      canvas.drawLine(
+        Offset(0, sma50Y),
+        Offset(size.width, sma50Y),
+        sma50Paint,
+      );
     }
 
-    // Draw volume bars if enabled
-    if (showVolume) {
-      final volumePaint = Paint()
-        ..color = const Color(0xFFFF6B6B).withOpacity(0.6)
-        ..style = PaintingStyle.fill;
+    // Draw Bollinger Bands if available
+    if (analysisResults.isNotEmpty && analysisResults['bollinger'] != null) {
+      final bollinger = analysisResults['bollinger'] as Map<String, double>;
+      final upper = bollinger['upper']!;
+      final lower = bollinger['lower']!;
 
-      final volumeHeight = size.height * 0.3;
-      final volumeData = _generateVolumeData(data.length);
+      final bandPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = Colors.purple.withOpacity(0.5);
 
-      for (int i = 0; i < volumeData.length; i++) {
-        final x = i * stepX;
-        final barWidth = stepX * 0.8;
-        final barHeight =
-            (volumeData[i] / volumeData.reduce((a, b) => a > b ? a : b)) *
-            volumeHeight;
+      final upperY =
+          size.height - ((upper - minPrice) / priceRange) * size.height;
+      final lowerY =
+          size.height - ((lower - minPrice) / priceRange) * size.height;
 
-        canvas.drawRect(
-          Rect.fromLTWH(x, size.height - barHeight, barWidth, barHeight),
-          volumePaint,
-        );
-      }
+      canvas.drawLine(Offset(0, upperY), Offset(size.width, upperY), bandPaint);
+      canvas.drawLine(Offset(0, lowerY), Offset(size.width, lowerY), bandPaint);
     }
 
     // Draw data points
     final pointPaint = Paint()
-      ..color = const Color(0xFF00D4FF)
+      ..color = const Color(0xFF00FFA3)
       ..style = PaintingStyle.fill;
 
-    for (int i = 0; i < data.length; i++) {
-      final x = i * stepX;
-      final y = getY(data[i]);
-      canvas.drawCircle(Offset(x, y), 2, pointPaint);
+    for (int i = 0; i < prices.length; i += (prices.length / 10).round()) {
+      final x = (i / (prices.length - 1)) * size.width;
+      final y =
+          size.height - ((prices[i] - minPrice) / priceRange) * size.height;
+      canvas.drawCircle(Offset(x, y), 3, pointPaint);
     }
-  }
-
-  List<double> _calculateSMA(List<double> data, int period) {
-    final result = <double>[];
-    for (int i = period - 1; i < data.length; i++) {
-      final sum = data.sublist(i - period + 1, i + 1).reduce((a, b) => a + b);
-      result.add(sum / period);
-    }
-    return result;
-  }
-
-  List<double> _generateVolumeData(int length) {
-    final random = List.generate(length, (index) => 0.5 + (index % 3) * 0.3);
-    return random;
   }
 
   @override

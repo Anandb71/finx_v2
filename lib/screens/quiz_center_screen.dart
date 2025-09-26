@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
+import '../theme/liquid_material_theme.dart';
+import '../widgets/liquid_card.dart';
+import '../utils/liquid_text_style.dart';
 
 class QuizCenterScreen extends StatefulWidget {
   const QuizCenterScreen({super.key});
@@ -177,161 +181,79 @@ class _QuizCenterScreenState extends State<QuizCenterScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0A0A0A),
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
+      body: Stack(
+        children: [
+          _buildAuroraBackground(),
+          CustomScrollView(
+            slivers: [
+              _buildLiquidAppBar(),
+              if (!_quizStarted && !_quizCompleted) ..._buildQuizSelection(),
+              if (_quizStarted && !_quizCompleted) ..._buildQuizInterface(),
+              if (_quizCompleted) ..._buildQuizResults(),
+              _buildBottomPadding(),
             ],
-            stops: [0.0, 0.3, 0.7, 1.0],
           ),
-        ),
-        child: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(),
-            if (!_quizStarted && !_quizCompleted) ..._buildQuizSelection(),
-            if (_quizStarted && !_quizCompleted) ..._buildQuizInterface(),
-            if (_quizCompleted) ..._buildQuizResults(),
-            _buildBottomPadding(),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar() {
+  Widget _buildAuroraBackground() {
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, child) {
+        return CustomPaint(
+          size: Size.infinite,
+          painter: AuroraPainter(_glowAnimation.value),
+        );
+      },
+    );
+  }
+
+  Widget _buildLiquidAppBar() {
     return SliverAppBar(
-      expandedHeight: 80,
+      expandedHeight: 120,
       floating: false,
       pinned: true,
       backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: AnimatedBuilder(
-        animation: _headerAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, 20 * (1 - _headerAnimation.value)),
-            child: Opacity(
-              opacity: _headerAnimation.value,
-              child: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF1A1A2E),
-                        Color(0xFF16213E),
-                        Color(0xFF0F3460),
-                      ],
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Animated background particles
-                      ...List.generate(
-                        10,
-                        (index) => _buildFloatingParticle(index),
-                      ),
-
-                      // Main content
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  icon: const Icon(
-                                    Icons.arrow_back_ios,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ShaderMask(
-                                  shaderCallback: (bounds) =>
-                                      const LinearGradient(
-                                        colors: [
-                                          Color(0xFFFF6B6B),
-                                          Color(0xFFFF8E53),
-                                        ],
-                                      ).createShader(bounds),
-                                  child: Text(
-                                    'Quiz Center',
-                                    style: GoogleFonts.orbitron(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                AnimatedBuilder(
-                                  animation: _glowAnimation,
-                                  builder: (context, child) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            const Color(
-                                              0xFFFF6B6B,
-                                            ).withOpacity(_glowAnimation.value),
-                                            const Color(
-                                              0xFFFF8E53,
-                                            ).withOpacity(_glowAnimation.value),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFFFF6B6B)
-                                                .withOpacity(
-                                                  0.3 * _glowAnimation.value,
-                                                ),
-                                            blurRadius:
-                                                15 * _glowAnimation.value,
-                                            spreadRadius:
-                                                2 * _glowAnimation.value,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        'QUIZ',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1A1A2E).withOpacity(0.8),
+                  const Color(0xFF16213E).withOpacity(0.6),
+                  const Color(0xFF0F3460).withOpacity(0.4),
+                ],
               ),
             ),
-          );
-        },
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Text(
+                    'Quiz Center',
+                    style: LiquidTextStyle.headlineMedium(
+                      context,
+                    ).copyWith(color: Colors.white, fontSize: 28),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Test your financial knowledge',
+                    style: LiquidTextStyle.bodyMedium(
+                      context,
+                    ).copyWith(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -378,265 +300,216 @@ class _QuizCenterScreenState extends State<QuizCenterScreen>
   List<Widget> _buildQuizSelection() {
     return [
       SliverToBoxAdapter(
-        child: AnimatedBuilder(
-          animation: _cardAnimation,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, 30 * (1 - _cardAnimation.value)),
-              child: Opacity(
-                opacity: _cardAnimation.value,
-                child: Container(
-                  margin: const EdgeInsets.all(20),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFFF6B6B).withOpacity(0.3),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF6B6B).withOpacity(0.1),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: LiquidCard(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quiz Categories',
+                    style: LiquidTextStyle.titleLarge(
+                      context,
+                    ).copyWith(color: Colors.white),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quiz Categories',
-                        style: GoogleFonts.orbitron(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 40,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _categories.length,
-                          itemBuilder: (context, index) {
-                            final isSelected =
-                                _categories[index] == _selectedCategory;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedCategory = _categories[index];
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.only(right: 12),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: isSelected
-                                      ? const LinearGradient(
-                                          colors: [
-                                            Color(0xFFFF6B6B),
-                                            Color(0xFFFF8E53),
-                                          ],
-                                        )
-                                      : null,
-                                  color: isSelected
-                                      ? null
-                                      : Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? const Color(0xFFFF6B6B)
-                                        : Colors.white.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    _categories[index],
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _categories.length,
+                      itemBuilder: (context, index) {
+                        final isSelected =
+                            _categories[index] == _selectedCategory;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = _categories[index];
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: isSelected
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color(0xFFFF6B6B),
+                                        Color(0xFFFF8E53),
+                                      ],
+                                    )
+                                  : null,
+                              color: isSelected
+                                  ? null
+                                  : Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFFFF6B6B)
+                                    : Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                _categories[index],
+                                style: LiquidTextStyle.bodyMedium(context)
+                                    .copyWith(
                                       color: isSelected
                                           ? Colors.white
                                           : Colors.white70,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
-                                  ),
-                                ),
                               ),
-                            );
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Difficulty Level',
+                    style: LiquidTextStyle.titleLarge(
+                      context,
+                    ).copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _difficulties.length,
+                      itemBuilder: (context, index) {
+                        final isSelected =
+                            _difficulties[index] == _selectedDifficulty;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedDifficulty = _difficulties[index];
+                            });
                           },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Difficulty Level',
-                        style: GoogleFonts.orbitron(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 40,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _difficulties.length,
-                          itemBuilder: (context, index) {
-                            final isSelected =
-                                _difficulties[index] == _selectedDifficulty;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedDifficulty = _difficulties[index];
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.only(right: 12),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: isSelected
-                                      ? const LinearGradient(
-                                          colors: [
-                                            Color(0xFF00D4FF),
-                                            Color(0xFF9C27B0),
-                                          ],
-                                        )
-                                      : null,
-                                  color: isSelected
-                                      ? null
-                                      : Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? const Color(0xFF00D4FF)
-                                        : Colors.white.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    _difficulties[index],
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: isSelected
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color(0xFF00D4FF),
+                                        Color(0xFF9C27B0),
+                                      ],
+                                    )
+                                  : null,
+                              color: isSelected
+                                  ? null
+                                  : Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFF00D4FF)
+                                    : Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                _difficulties[index],
+                                style: LiquidTextStyle.bodyMedium(context)
+                                    .copyWith(
                                       color: isSelected
                                           ? Colors.white
                                           : Colors.white70,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
-                                  ),
-                                ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
       SliverToBoxAdapter(
-        child: AnimatedBuilder(
-          animation: _cardAnimation,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, 20 * (1 - _cardAnimation.value)),
-              child: Opacity(
-                opacity: _cardAnimation.value,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFF00FFA3).withOpacity(0.3),
-                      width: 1,
-                    ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: LiquidCard(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Text(
+                    'Ready to Test Your Knowledge?',
+                    style: LiquidTextStyle.titleLarge(
+                      context,
+                    ).copyWith(color: Colors.white),
+                    textAlign: TextAlign.center,
                   ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Ready to Test Your Knowledge?',
-                        style: GoogleFonts.orbitron(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_getFilteredQuestions().length} questions • ${_getDifficultyText()} level',
+                    style: LiquidTextStyle.bodyMedium(
+                      context,
+                    ).copyWith(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${_getFilteredQuestions().length} questions • ${_getDifficultyText()} level',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Colors.white70,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00FFA3).withOpacity(0.3),
+                          blurRadius: 10,
+                          spreadRadius: 1,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                          ),
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF00FFA3).withOpacity(0.3),
-                              blurRadius: 10,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _startQuiz,
-                            borderRadius: BorderRadius.circular(25),
-                            child: Center(
-                              child: Text(
-                                'Start Quiz',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _startQuiz,
+                        borderRadius: BorderRadius.circular(25),
+                        child: Center(
+                          child: Text(
+                            'Start Quiz',
+                            style: LiquidTextStyle.bodyLarge(context).copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     ];
@@ -1234,3 +1107,32 @@ class _QuizCenterScreenState extends State<QuizCenterScreen>
   }
 }
 
+class AuroraPainter extends CustomPainter {
+  final double animationValue;
+
+  AuroraPainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFF1A1A2E).withOpacity(0.03),
+          const Color(0xFF16213E).withOpacity(0.05),
+          const Color(0xFF0F3460).withOpacity(0.03),
+        ],
+        stops: [
+          0.0 + (animationValue * 0.1),
+          0.5 + (animationValue * 0.2),
+          1.0 + (animationValue * 0.1),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}

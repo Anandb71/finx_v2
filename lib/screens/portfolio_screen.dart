@@ -1,11 +1,10 @@
 // lib/screens/portfolio_screen.dart
 
+import 'package:finx_v2/screens/trade_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../services/enhanced_portfolio_provider.dart'; // FIX: Use the correct provider
-import 'trade_screen.dart';
-import 'dart:math' as math;
+import '../services/enhanced_portfolio_provider.dart';
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({super.key});
@@ -64,7 +63,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       body: Consumer<EnhancedPortfolioProvider>(
-        // FIX: Use the correct provider
         builder: (context, portfolio, child) {
           return CustomScrollView(
             slivers: [
@@ -123,7 +121,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   }
 
   Widget _buildPortfolioOverview(EnhancedPortfolioProvider portfolio) {
-    // FIX: Use the correct provider
     final totalValue = portfolio.totalValue;
     final gainLoss = portfolio.dayGain;
     final gainLossPercent = portfolio.dayGainPercent;
@@ -196,7 +193,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.abs().toStringAsFixed(2)} (${gainLoss >= 0 ? '+' : ''}${gainLossPercent.toStringAsFixed(2)}%)',
+                            '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.abs().toStringAsFixed(2)} (${gainLossPercent.toStringAsFixed(2)}%)',
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -251,7 +248,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                     Expanded(
                       child: _buildStatCard(
                         'Total Trades',
-                        '${portfolio.transactions.length}',
+                        '${portfolio.transactionHistory.length}',
                         Icons.swap_horiz,
                         Colors.purple,
                       ),
@@ -260,7 +257,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                     Expanded(
                       child: _buildStatCard(
                         'Level',
-                        '${_calculateUserLevel(portfolio.totalValue)}',
+                        '${portfolio.userLevel}',
                         Icons.star,
                         Colors.yellow,
                       ),
@@ -352,9 +349,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   }
 
   Widget _buildPerformanceChart(EnhancedPortfolioProvider portfolio) {
-    // FIX: Use the correct provider
-    // Generate sample history data
-    final history = _generateSampleHistory(portfolio);
+    final history = portfolio.portfolioHistory;
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -468,7 +463,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   }
 
   Widget _buildHoldingsList(EnhancedPortfolioProvider portfolio) {
-    // FIX: Use the correct provider
     final holdings = portfolio.holdings;
 
     if (holdings.isEmpty) {
@@ -510,16 +504,11 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      // Navigate to trade screen with some default stock
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const TradeScreen(
-                            stockData: {
-                              'symbol': 'AAPL',
-                              'name': 'Apple Inc.',
-                              'price': 170.0,
-                            },
+                            stockData: {'symbol': 'AAPL', 'name': 'Apple Inc.'},
                           ),
                         ),
                       );
@@ -574,13 +563,9 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 final symbol = entry.key;
                 final quantity = entry.value;
                 final stockInfo = portfolio.getStockData(symbol);
-
                 final currentPrice = stockInfo?.currentPrice ?? 0.0;
                 final value = quantity * currentPrice;
-                final purchasePrice = _getAveragePurchasePrice(
-                  portfolio,
-                  symbol,
-                );
+                final purchasePrice = portfolio.getAveragePurchasePrice(symbol);
                 final gainLoss = (currentPrice - purchasePrice) * quantity;
                 final gainLossPercent = purchasePrice > 0
                     ? ((currentPrice - purchasePrice) / purchasePrice) * 100
@@ -717,8 +702,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   }
 
   Widget _buildRecentTransactions(EnhancedPortfolioProvider portfolio) {
-    // FIX: Use the correct provider
-    final transactions = portfolio.transactions;
+    final transactions = portfolio.transactionHistory;
 
     if (transactions.isEmpty) {
       return SliverToBoxAdapter(
@@ -864,59 +848,6 @@ class _PortfolioScreenState extends State<PortfolioScreen>
         ),
       ),
     );
-  }
-
-  int _calculateUserLevel(double totalValue) {
-    if (totalValue >= 1000000) return 10;
-    if (totalValue >= 500000) return 9;
-    if (totalValue >= 250000) return 8;
-    if (totalValue >= 100000) return 7;
-    if (totalValue >= 50000) return 6;
-    if (totalValue >= 25000) return 5;
-    if (totalValue >= 10000) return 4;
-    if (totalValue >= 5000) return 3;
-    if (totalValue >= 1000) return 2;
-    return 1;
-  }
-
-  double _getAveragePurchasePrice(
-    EnhancedPortfolioProvider portfolio,
-    String symbol,
-  ) {
-    // Calculate average purchase price from transaction history
-    final transactions = portfolio.transactions
-        .where((t) => t.symbol == symbol && t.type == TransactionType.buy)
-        .toList();
-
-    if (transactions.isEmpty) return 0.0;
-
-    double totalCost = 0.0;
-    int totalQuantity = 0;
-
-    for (final transaction in transactions) {
-      totalCost += transaction.price * transaction.quantity;
-      totalQuantity += transaction.quantity;
-    }
-
-    return totalQuantity > 0 ? totalCost / totalQuantity : 0.0;
-  }
-
-  List<Map<String, dynamic>> _generateSampleHistory(
-    EnhancedPortfolioProvider portfolio,
-  ) {
-    final currentValue = portfolio.totalValue;
-    final List<Map<String, dynamic>> history = [];
-
-    for (int i = 29; i >= 0; i--) {
-      final date = DateTime.now().subtract(Duration(days: i));
-      final variation =
-          (math.Random().nextDouble() - 0.5) * 0.1; // ±5% variation
-      final value = currentValue * (1 + variation);
-
-      history.add({'date': date, 'value': value});
-    }
-
-    return history;
   }
 }
 

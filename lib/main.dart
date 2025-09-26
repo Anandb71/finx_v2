@@ -3,12 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'auth/auth_gate.dart';
 import 'screens/signup_screen.dart';
 import 'screens/login_screen.dart';
-// import 'screens/optimized_dashboard_screen.dart'; // Available for future use
-import 'services/portfolio_provider.dart';
 import 'services/enhanced_portfolio_provider.dart';
 import 'services/real_time_data_service.dart';
 import 'services/performance_monitor.dart';
@@ -23,6 +22,10 @@ import 'theme/liquid_material_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize services
@@ -46,13 +49,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Original portfolio provider for backward compatibility
-        ChangeNotifierProvider(
-          create: (context) => PortfolioProvider()
-            ..initializeMockHistory()
-            ..initializeChallenges(),
-        ),
-
         // Enhanced portfolio provider with real-time data
         ChangeNotifierProvider(
           create: (context) {

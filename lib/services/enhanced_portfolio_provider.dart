@@ -29,11 +29,13 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
   double _totalGainPercent = 0.0;
   double _dayGain = 0.0;
   double _dayGainPercent = 0.0;
+  final List<double> _portfolioValueHistory = [100000.0];
 
   // Getters
   double get virtualCash => _virtualCash;
   Map<String, int> get holdings => Map.unmodifiable(_holdings);
   List<Transaction> get transactions => List.unmodifiable(_transactions);
+  List<Transaction> get transactionHistory => List.unmodifiable(_transactions);
   Map<String, StockData> get currentStockData =>
       Map.unmodifiable(_currentStockData);
   double get totalValue => _totalValue;
@@ -41,6 +43,21 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
   double get totalGainPercent => _totalGainPercent;
   double get dayGain => _dayGain;
   double get dayGainPercent => _dayGainPercent;
+  List<double> get portfolioValueHistory =>
+      List.unmodifiable(_portfolioValueHistory);
+
+  List<Map<String, dynamic>> get portfolioHistory {
+    return _portfolioValueHistory.asMap().entries.map((entry) {
+      return {
+        'date': DateTime.now()
+            .subtract(
+              Duration(days: _portfolioValueHistory.length - 1 - entry.key),
+            )
+            .toIso8601String(),
+        'value': entry.value,
+      };
+    }).toList();
+  }
 
   int get userLevel {
     // Example logic: Level up every $5,000 in portfolio value
@@ -175,6 +192,13 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
         : 0;
     _dayGain = newDayGain;
     _dayGainPercent = _totalValue > 0 ? (_dayGain / _totalValue) * 100 : 0;
+
+    // Update portfolio value history
+    _portfolioValueHistory.add(_totalValue);
+    // Keep only last 100 values to prevent memory issues
+    if (_portfolioValueHistory.length > 100) {
+      _portfolioValueHistory.removeAt(0);
+    }
   }
 
   /// Get average cost for a stock
@@ -390,6 +414,40 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     };
 
     return sectorMap[symbol] ?? 'Other';
+  }
+
+  /// Get average purchase price for a stock
+  double getAveragePurchasePrice(String symbol) {
+    final symbolTransactions = _transactions
+        .where((t) => t.symbol == symbol)
+        .toList();
+
+    if (symbolTransactions.isEmpty) return 0.0;
+
+    double totalCost = 0.0;
+    int totalQuantity = 0;
+
+    for (final transaction in symbolTransactions) {
+      if (transaction.type == TransactionType.buy) {
+        totalCost += transaction.totalValue;
+        totalQuantity += transaction.quantity;
+      } else if (transaction.type == TransactionType.sell) {
+        // For sells, we need to calculate the average cost of remaining shares
+        // This is a simplified FIFO approach
+        totalQuantity -= transaction.quantity;
+        if (totalQuantity <= 0) {
+          totalCost = 0.0;
+          totalQuantity = 0;
+        } else {
+          // Adjust cost proportionally
+          totalCost =
+              totalCost *
+              (totalQuantity / (totalQuantity + transaction.quantity));
+        }
+      }
+    }
+
+    return totalQuantity > 0 ? totalCost / totalQuantity : 0.0;
   }
 
   /// Clean up resources
