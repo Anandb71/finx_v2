@@ -67,9 +67,17 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
   }
 
   void _onTap() {
-    _bounceController.forward().then((_) {
-      _bounceController.reverse();
-    });
+    try {
+      _bounceController.forward().then((_) {
+        try {
+          _bounceController.reverse();
+        } catch (e) {
+          // Controller might be disposed, ignore
+        }
+      });
+    } catch (e) {
+      // Controller might be disposed, ignore
+    }
 
     // Use the global navigator key to ensure proper navigation
     GlobalMascotManager.navigatorKey.currentState?.push(

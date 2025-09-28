@@ -57,17 +57,31 @@ class LiquidMaterialTheme {
 
   // Static fallback colors for use in static contexts
   static const Color _defaultNeonAccent = Color(0xFF00E676);
-  static const Color _defaultDarkSpaceBackground = Color(0xFF0F0F23);
+  static const Color _defaultDarkSpaceBackground = Color(
+    0xFF000000,
+  ); // Super dark black
   static const Color _defaultSoftWhite = Color(0xFFEAEAEA);
 
   /// 🌊 Create Dynamic Dark Theme
   static ThemeData createDarkTheme(ColorScheme? dynamicColorScheme) {
-    final colorScheme =
-        dynamicColorScheme ??
-        ColorScheme.fromSeed(
-          seedColor: _defaultNeonAccent,
-          brightness: Brightness.dark,
-        );
+    final colorScheme = ColorScheme.dark(
+      primary: _defaultNeonAccent,
+      onPrimary: Colors.black,
+      secondary: const Color(0xFF00BCD4),
+      onSecondary: Colors.black,
+      surface: const Color(0xFF000000), // Super dark black
+      onSurface: Colors.white,
+      background: const Color(0xFF000000), // Super dark black
+      onBackground: Colors.white,
+      error: const Color(0xFFFF6B6B),
+      onError: Colors.white,
+      surfaceVariant: const Color(0xFF1A1A1A), // Very dark gray
+      onSurfaceVariant: Colors.white70,
+      outline: Colors.white24,
+      outlineVariant: Colors.white12,
+      secondaryContainer: const Color(0xFF1A1A1A),
+      onSecondaryContainer: Colors.white70,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -118,14 +132,26 @@ class LiquidMaterialTheme {
     );
   }
 
-  /// 🌊 Create Dynamic Light Theme
+  /// 🌊 Create Dynamic Light Theme (Actually super dark)
   static ThemeData createLightTheme(ColorScheme? dynamicColorScheme) {
-    final colorScheme =
-        dynamicColorScheme ??
-        ColorScheme.fromSeed(
-          seedColor: _defaultNeonAccent,
-          brightness: Brightness.light,
-        );
+    final colorScheme = ColorScheme.dark(
+      primary: _defaultNeonAccent,
+      onPrimary: Colors.black,
+      secondary: const Color(0xFF00BCD4),
+      onSecondary: Colors.black,
+      surface: const Color(0xFF000000), // Super dark black
+      onSurface: Colors.white,
+      background: const Color(0xFF000000), // Super dark black
+      onBackground: Colors.white,
+      error: const Color(0xFFFF6B6B),
+      onError: Colors.white,
+      surfaceVariant: const Color(0xFF1A1A1A), // Very dark gray
+      onSurfaceVariant: Colors.white70,
+      outline: Colors.white24,
+      outlineVariant: Colors.white12,
+      secondaryContainer: const Color(0xFF1A1A1A),
+      onSecondaryContainer: Colors.white70,
+    );
 
     return ThemeData(
       useMaterial3: true,

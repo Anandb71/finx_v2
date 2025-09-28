@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:animations/animations.dart';
 import '../services/enhanced_portfolio_provider.dart';
+import '../services/achievement_service.dart';
+import '../services/quest_service.dart';
 import '../widgets/liquid_card.dart';
 import '../widgets/liquid_sparkline_chart.dart';
-import '../theme/liquid_material_theme.dart';
 
 enum TradeMode { buy, sell }
 
@@ -29,13 +29,11 @@ class _TradeScreenState extends State<TradeScreen>
   late final AnimationController _slideController;
   late final AnimationController _pulseController;
   late final AnimationController _glowController;
-  late final AnimationController _shimmerController;
 
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
   late final Animation<double> _pulseAnimation;
   late final Animation<double> _glowAnimation;
-  late final Animation<double> _shimmerAnimation;
 
   // --- State Variables ---
   final TextEditingController _quantityController = TextEditingController();
@@ -85,10 +83,6 @@ class _TradeScreenState extends State<TradeScreen>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
-      vsync: this,
-    );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
@@ -103,9 +97,6 @@ class _TradeScreenState extends State<TradeScreen>
     _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
-    _shimmerAnimation = Tween<double>(begin: -1.0, end: 1.0).animate(
-      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
-    );
   }
 
   void _startAnimations() {
@@ -113,7 +104,6 @@ class _TradeScreenState extends State<TradeScreen>
     _slideController.forward();
     _pulseController.repeat(reverse: true);
     _glowController.repeat(reverse: true);
-    _shimmerController.repeat();
   }
 
   @override
@@ -122,7 +112,6 @@ class _TradeScreenState extends State<TradeScreen>
     _slideController.dispose();
     _pulseController.dispose();
     _glowController.dispose();
-    _shimmerController.dispose();
     _quantityController.dispose();
     super.dispose();
   }
@@ -218,6 +207,9 @@ class _TradeScreenState extends State<TradeScreen>
         });
         HapticFeedback.heavyImpact();
 
+        // Check for achievements and quests after successful trade
+        _checkAchievementsAndQuests(portfolio);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -259,6 +251,22 @@ class _TradeScreenState extends State<TradeScreen>
     setState(() {
       _showConfirmationDialog = false;
     });
+  }
+
+  Future<void> _checkAchievementsAndQuests(
+    EnhancedPortfolioProvider portfolio,
+  ) async {
+    try {
+      // Check achievements
+      final achievementService = context.read<AchievementService>();
+      await achievementService.checkForAchievements(portfolio);
+
+      // Check quests
+      final questService = context.read<QuestService>();
+      await questService.checkQuests(portfolio);
+    } catch (e) {
+      print('Error checking achievements and quests: $e');
+    }
   }
 
   @override

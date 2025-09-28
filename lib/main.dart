@@ -12,6 +12,10 @@ import 'services/enhanced_portfolio_provider.dart';
 import 'services/real_time_data_service.dart';
 import 'services/performance_monitor.dart';
 import 'services/data_cache.dart';
+import 'services/achievement_service.dart';
+import 'services/quest_service.dart';
+import 'services/ai_mentor_state_service.dart';
+import 'services/news_service.dart';
 import 'widgets/app_with_floating_ai.dart';
 import 'services/global_mascot_manager.dart';
 import 'theme/liquid_material_theme.dart';
@@ -67,6 +71,18 @@ class MyApp extends StatelessWidget {
 
         // Data cache
         Provider(create: (context) => DataCache()),
+
+        // Achievement service
+        ChangeNotifierProvider(create: (context) => AchievementService()),
+
+        // Quest service
+        ChangeNotifierProvider(create: (context) => QuestService()),
+
+        // AI Mentor state service
+        ChangeNotifierProvider(create: (context) => AIMentorStateService()),
+
+        // News service
+        Provider(create: (context) => NewsService()),
       ],
       child: DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
@@ -92,10 +108,13 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             navigatorKey: GlobalMascotManager.navigatorKey,
             debugShowCheckedModeBanner: false,
-            theme: LiquidMaterialTheme.createLightTheme(lightColorScheme),
-            darkTheme: LiquidMaterialTheme.createDarkTheme(darkColorScheme),
-            themeMode:
-                ThemeMode.dark, // Defaulting to dark mode for our aesthetic
+            theme: LiquidMaterialTheme.createDarkTheme(
+              null,
+            ), // Force super dark theme
+            darkTheme: LiquidMaterialTheme.createDarkTheme(
+              null,
+            ), // Force super dark theme
+            themeMode: ThemeMode.dark, // Always use dark mode
             home: const AppWithFloatingAI(child: AuthGate()),
             builder: (context, child) {
               return AppWithFloatingAI(
@@ -260,10 +279,10 @@ class _LandingPageState extends State<LandingPage>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0F0F23), // Deep navy
-              Color(0xFF1A1A2E), // Dark blue-gray
-              Color(0xFF16213E), // Medium blue
-              Color(0xFF0F3460), // Rich blue
+              Color(0xFF000000), // Super dark black
+              Color(0xFF0A0A0A), // Very dark gray
+              Color(0xFF000000), // Super dark black
+              Color(0xFF000000), // Super dark black
             ],
             stops: [0.0, 0.3, 0.7, 1.0],
           ),
@@ -609,9 +628,9 @@ class _LandingPageState extends State<LandingPage>
             radius: 1.2,
             colors: [
               const Color(0xFF00FFA3).withOpacity(0.1),
-              const Color(0xFF00D4FF).withOpacity(0.08),
-              const Color(0xFF8A2BE2).withOpacity(0.06),
-              const Color(0xFF00FFA3).withOpacity(0.04),
+              const Color(0xFF00D4FF).withOpacity(0.015),
+              const Color(0xFF8A2BE2).withOpacity(0.01),
+              const Color(0xFF00FFA3).withOpacity(0.008),
               Colors.transparent,
             ],
             stops: const [0.0, 0.3, 0.6, 0.8, 1.0],

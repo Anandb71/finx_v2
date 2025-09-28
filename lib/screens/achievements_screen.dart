@@ -3,10 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
-import '../services/enhanced_portfolio_provider.dart';
 import '../services/achievement_service.dart';
-import '../models/achievement.dart';
-import '../theme/liquid_material_theme.dart';
 import '../widgets/liquid_card.dart';
 import '../utils/liquid_text_style.dart';
 
@@ -19,73 +16,58 @@ class AchievementsScreen extends StatefulWidget {
 
 class _AchievementsScreenState extends State<AchievementsScreen>
     with TickerProviderStateMixin {
-  late AnimationController _headerAnimationController;
-  late AnimationController _cardAnimationController;
   late AnimationController _auroraController;
-  late Animation<double> _headerAnimation;
-  late Animation<double> _cardAnimation;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
 
   String _selectedFilter = 'All';
-  final List<String> _filters = [
+  final List<String> _filterOptions = [
     'All',
     'Trading',
+    'Wealth',
+    'Strategy',
     'Learning',
-    'Social',
-    'Special',
   ];
 
   @override
   void initState() {
     super.initState();
-    _headerAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _cardAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
     _auroraController = AnimationController(
-      duration: const Duration(seconds: 30),
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat(reverse: true);
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
 
-    _headerAnimation = CurvedAnimation(
-      parent: _headerAnimationController,
-      curve: Curves.easeOutCubic,
-    );
-    _cardAnimation = CurvedAnimation(
-      parent: _cardAnimationController,
-      curve: Curves.easeOutCubic,
-    );
-
-    _headerAnimationController.forward();
-    _cardAnimationController.forward();
-    _auroraController.repeat(reverse: true);
+    _fadeController.forward();
+    _slideController.forward();
   }
 
   @override
   void dispose() {
-    _headerAnimationController.dispose();
-    _cardAnimationController.dispose();
     _auroraController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Stack(
         children: [
-          // Aurora background
           _buildAuroraBackground(),
-          // Main content
           CustomScrollView(
-            physics: const BouncingScrollPhysics(),
             slivers: [
               _buildLiquidAppBar(),
-              _buildStatsSection(),
               _buildFilterSection(),
               _buildAchievementsList(),
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -100,22 +82,9 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     return AnimatedBuilder(
       animation: _auroraController,
       builder: (context, child) {
-        final colorScheme = Theme.of(context).colorScheme;
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color.lerp(
-                  colorScheme.background,
-                  colorScheme.primary.withOpacity(0.03),
-                  _auroraController.value,
-                )!,
-                colorScheme.background,
-              ],
-            ),
-          ),
+        return CustomPaint(
+          size: Size.infinite,
+          painter: AuroraPainter(_auroraController.value),
         );
       },
     );
@@ -123,111 +92,47 @@ class _AchievementsScreenState extends State<AchievementsScreen>
 
   Widget _buildLiquidAppBar() {
     return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
       pinned: true,
       backgroundColor: Colors.transparent,
-      elevation: 0,
-      toolbarHeight: 100,
       flexibleSpace: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: LiquidMaterialTheme.darkSpaceBackground(
-                context,
-              ).withOpacity(0.5),
-              border: Border(
-                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1A1A2E).withOpacity(0.8),
+                  const Color(0xFF16213E).withOpacity(0.6),
+                  const Color(0xFF0F3460).withOpacity(0.4),
+                ],
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-              child: Row(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.emoji_events_outlined,
-                    color: LiquidMaterialTheme.neonAccent(context),
-                    size: 28,
-                  ),
-                  const SizedBox(width: 16),
+                  const SizedBox(height: 40),
                   Text(
                     'Achievements',
-                    style: LiquidTextStyle.headlineMedium(context),
+                    style: LiquidTextStyle.headlineMedium(
+                      context,
+                    ).copyWith(color: Colors.white, fontSize: 28),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Track your progress and unlock rewards',
+                    style: LiquidTextStyle.bodyMedium(
+                      context,
+                    ).copyWith(color: Colors.white70),
                   ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsSection() {
-    return SliverToBoxAdapter(
-      child: FadeTransition(
-        opacity: _headerAnimation,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Consumer<EnhancedPortfolioProvider>(
-            builder: (context, portfolio, child) {
-              return Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Unlocked',
-                      '${_getUnlockedCount()}',
-                      Icons.check_circle_outline,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total',
-                      '${_getTotalCount()}',
-                      Icons.emoji_events_outlined,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Progress',
-                      '${_getProgressPercentage()}%',
-                      Icons.trending_up,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    return LiquidCard(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: LiquidMaterialTheme.neonAccent(context),
-              size: 24,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: LiquidTextStyle.titleLarge(context),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: LiquidTextStyle.bodyMedium(context),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       ),
     );
@@ -236,49 +141,82 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   Widget _buildFilterSection() {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _filters.map((filter) {
-              final isSelected = _selectedFilter == filter;
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedFilter = filter),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? LiquidMaterialTheme.neonAccent(context)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? LiquidMaterialTheme.neonAccent(context)
-                            : Colors.white.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      filter,
-                      style: LiquidTextStyle.bodyMedium(context).copyWith(
-                        color: isSelected
-                            ? LiquidMaterialTheme.darkSpaceBackground(context)
-                            : Colors.white70,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
+        padding: const EdgeInsets.all(16),
+        child: LiquidCard(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Filter by Category',
+                  style: LiquidTextStyle.titleLarge(
+                    context,
+                  ).copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _filterOptions.length,
+                    itemBuilder: (context, index) {
+                      final filter = _filterOptions[index];
+                      final isSelected = _selectedFilter == filter;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedFilter = filter;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? const LinearGradient(
+                                    colors: [
+                                      Color(0xFF00FFA3),
+                                      Color(0xFF00D4FF),
+                                    ],
+                                  )
+                                : null,
+                            color: isSelected
+                                ? null
+                                : Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF00FFA3)
+                                  : Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              filter,
+                              style: LiquidTextStyle.bodyMedium(context)
+                                  .copyWith(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white70,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              );
-            }).toList(),
+              ],
+            ),
           ),
         ),
       ),
@@ -286,244 +224,261 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   }
 
   Widget _buildAchievementsList() {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final achievement = _getFilteredAchievements()[index];
-          return FadeTransition(
-            opacity: _cardAnimation,
-            child: SlideTransition(
-              position:
-                  Tween<Offset>(
-                    begin: const Offset(0, 0.3),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(
-                      parent: _cardAnimationController,
-                      curve: Interval(
-                        index * 0.1,
-                        1.0,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    ),
-                  ),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _buildAchievementCard(achievement),
-              ),
-            ),
-          );
-        }, childCount: _getFilteredAchievements().length),
-      ),
-    );
-  }
+    return Consumer<AchievementService>(
+      builder: (context, achievementService, child) {
+        final achievements = _getFilteredAchievements(achievementService);
+        final unlockedCount = achievementService.unlockedAchievements.length;
+        final totalCount = achievementService.allAchievements.length;
+        final progressPercentage = totalCount > 0
+            ? (unlockedCount / totalCount * 100).round()
+            : 0;
 
-  Widget _buildAchievementCard(Achievement achievement) {
-    return LiquidCard(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: achievement.isUnlocked
-                      ? [
-                          LiquidMaterialTheme.neonAccent(context),
-                          LiquidMaterialTheme.neonAccent(
-                            context,
-                          ).withOpacity(0.7),
-                        ]
-                      : [
-                          Colors.grey.withOpacity(0.3),
-                          Colors.grey.withOpacity(0.1),
-                        ],
-                ),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: achievement.isUnlocked
-                    ? [
-                        BoxShadow(
-                          color: LiquidMaterialTheme.neonAccent(
-                            context,
-                          ).withOpacity(0.3),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Center(
-                child: Text(
-                  achievement.icon,
-                  style: const TextStyle(fontSize: 24),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    achievement.title,
-                    style: LiquidTextStyle.titleMedium(context).copyWith(
-                      color: achievement.isUnlocked
-                          ? Colors.white
-                          : Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    achievement.description,
-                    style: LiquidTextStyle.bodyMedium(context).copyWith(
-                      color: achievement.isUnlocked
-                          ? Colors.white70
-                          : Colors.grey,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (achievement.isUnlocked) ...[
-                    const SizedBox(height: 8),
-                    Row(
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Progress Summary
+                LiquidCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${achievement.xpReward} XP',
-                          style: LiquidTextStyle.labelSmall(
-                            context,
-                          ).copyWith(color: Colors.amber),
+                        _buildStatItem(
+                          'Unlocked',
+                          unlockedCount.toString(),
+                          Colors.green,
+                        ),
+                        _buildStatItem(
+                          'Total',
+                          totalCount.toString(),
+                          Colors.blue,
+                        ),
+                        _buildStatItem(
+                          'Progress',
+                          '$progressPercentage%',
+                          Colors.orange,
+                        ),
+                        _buildStatItem(
+                          'Points',
+                          achievementService.totalPoints.toString(),
+                          Colors.purple,
                         ),
                       ],
                     ),
-                  ],
-                ],
-              ),
-            ),
-            if (achievement.isUnlocked)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: LiquidMaterialTheme.neonAccent(
-                    context,
-                  ).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'UNLOCKED',
-                  style: LiquidTextStyle.labelSmall(context).copyWith(
-                    color: LiquidMaterialTheme.neonAccent(context),
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Achievements Grid
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.8,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: achievements.length,
+                  itemBuilder: (context, index) {
+                    final achievement = achievements[index];
+                    final isUnlocked = achievementService.isAchievementUnlocked(
+                      achievement.id,
+                    );
+                    return _buildAchievementCard(achievement, isUnlocked);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<Achievement> _getFilteredAchievements(AchievementService service) {
+    final allAchievements = service.allAchievements;
+    if (_selectedFilter == 'All') {
+      return allAchievements;
+    }
+    return allAchievements.where((achievement) {
+      return achievement.category.toLowerCase() ==
+          _selectedFilter.toLowerCase();
+    }).toList();
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: LiquidTextStyle.titleLarge(
+            context,
+          ).copyWith(color: color, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: LiquidTextStyle.bodyMedium(
+            context,
+          ).copyWith(color: Colors.white70, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAchievementCard(Achievement achievement, bool isUnlocked) {
+    return FadeTransition(
+      opacity: _fadeController,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
+            .animate(
+              CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
+            ),
+        child: LiquidCard(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: isUnlocked
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF00FFA3).withOpacity(0.1),
+                        const Color(0xFF00D4FF).withOpacity(0.1),
+                      ],
+                    )
+                  : null,
+              border: Border.all(
+                color: isUnlocked
+                    ? const Color(0xFF00FFA3)
+                    : Colors.white.withOpacity(0.2),
+                width: 1,
               ),
-          ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      achievement.icon,
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                    if (isUnlocked)
+                      const Icon(
+                        Icons.check_circle,
+                        color: Color(0xFF00FFA3),
+                        size: 20,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  achievement.title,
+                  style: LiquidTextStyle.titleMedium(context).copyWith(
+                    color: isUnlocked ? Colors.white : Colors.white70,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  achievement.description,
+                  style: LiquidTextStyle.bodyMedium(
+                    context,
+                  ).copyWith(color: Colors.white60, fontSize: 12),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getCategoryColor(
+                          achievement.category,
+                        ).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        achievement.category,
+                        style: LiquidTextStyle.bodyMedium(context).copyWith(
+                          color: _getCategoryColor(achievement.category),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${achievement.points} pts',
+                      style: LiquidTextStyle.bodyMedium(context).copyWith(
+                        color: Colors.orange,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  List<Achievement> _getFilteredAchievements() {
-    final allAchievements = _getAllAchievements();
-    if (_selectedFilter == 'All') {
-      return allAchievements;
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'trading':
+        return Colors.green;
+      case 'wealth':
+        return Colors.blue;
+      case 'strategy':
+        return Colors.orange;
+      case 'learning':
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
-    return allAchievements.where((achievement) {
-      return achievement.type.name.toLowerCase() ==
-          _selectedFilter.toLowerCase();
-    }).toList();
+  }
+}
+
+class AuroraPainter extends CustomPainter {
+  final double animationValue;
+
+  AuroraPainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFF0A0A1A).withOpacity(0.008),
+          const Color(0xFF0D1B2A).withOpacity(0.012),
+          const Color(0xFF0A1A2E).withOpacity(0.008),
+        ],
+        stops: [
+          0.0 + (animationValue * 0.1),
+          0.5 + (animationValue * 0.2),
+          1.0 + (animationValue * 0.1),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
   }
 
-  List<Achievement> _getAllAchievements() {
-    return [
-      Achievement(
-        id: '1',
-        title: 'First Trade',
-        description: 'Complete your first trade',
-        icon: '📈',
-        type: AchievementType.trading,
-        rarity: AchievementRarity.common,
-        xpReward: 100,
-        requirements: ['Complete first trade'],
-        isUnlocked: true,
-      ),
-      Achievement(
-        id: '2',
-        title: 'Portfolio Master',
-        description: 'Reach \$100K portfolio value',
-        icon: '💰',
-        type: AchievementType.trading,
-        rarity: AchievementRarity.rare,
-        xpReward: 500,
-        requirements: ['Reach \$100K portfolio value'],
-        isUnlocked: false,
-      ),
-      Achievement(
-        id: '3',
-        title: 'Risk Taker',
-        description: 'Make 10 high-risk trades',
-        icon: '⚠️',
-        type: AchievementType.trading,
-        rarity: AchievementRarity.uncommon,
-        xpReward: 300,
-        requirements: ['Make 10 high-risk trades'],
-        isUnlocked: false,
-      ),
-      Achievement(
-        id: '4',
-        title: 'Learning Champion',
-        description: 'Complete 5 learning modules',
-        icon: '🎓',
-        type: AchievementType.learning,
-        rarity: AchievementRarity.uncommon,
-        xpReward: 200,
-        requirements: ['Complete 5 learning modules'],
-        isUnlocked: true,
-      ),
-      Achievement(
-        id: '5',
-        title: 'Social Butterfly',
-        description: 'Share your first portfolio',
-        icon: '📤',
-        type: AchievementType.social,
-        rarity: AchievementRarity.common,
-        xpReward: 150,
-        requirements: ['Share first portfolio'],
-        isUnlocked: false,
-      ),
-      Achievement(
-        id: '6',
-        title: 'Special Achievement',
-        description: 'Complete a special challenge',
-        icon: '🏆',
-        type: AchievementType.special,
-        rarity: AchievementRarity.legendary,
-        xpReward: 1000,
-        requirements: ['Complete special challenge'],
-        isUnlocked: false,
-      ),
-    ];
-  }
-
-  int _getUnlockedCount() {
-    return _getAllAchievements()
-        .where((achievement) => achievement.isUnlocked)
-        .length;
-  }
-
-  int _getTotalCount() {
-    return _getAllAchievements().length;
-  }
-
-  int _getProgressPercentage() {
-    if (_getTotalCount() == 0) return 0;
-    return ((_getUnlockedCount() / _getTotalCount()) * 100).round();
-  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

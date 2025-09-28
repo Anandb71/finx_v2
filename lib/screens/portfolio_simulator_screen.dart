@@ -528,9 +528,9 @@ class AuroraPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          const Color(0xFF1A1A2E).withOpacity(0.03),
-          const Color(0xFF16213E).withOpacity(0.05),
-          const Color(0xFF0F3460).withOpacity(0.03),
+          const Color(0xFF0A0A1A).withOpacity(0.008),
+          const Color(0xFF0D1B2A).withOpacity(0.012),
+          const Color(0xFF0A1A2E).withOpacity(0.008),
         ],
         stops: [
           0.0 + (animationValue * 0.1),

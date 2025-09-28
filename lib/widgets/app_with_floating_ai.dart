@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'floating_ai_button.dart';
+import '../services/ai_mentor_state_service.dart';
 
 class AppWithFloatingAI extends StatelessWidget {
   final Widget child;
@@ -13,8 +15,16 @@ class AppWithFloatingAI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [child, if (showFloatingAI) const FloatingAIButton()],
+    return Consumer<AIMentorStateService>(
+      builder: (context, aiMentorState, child) {
+        return Stack(
+          children: [
+            this.child,
+            if (this.showFloatingAI && !aiMentorState.isAIMentorOpen)
+              const FloatingAIButton(),
+          ],
+        );
+      },
     );
   }
 }

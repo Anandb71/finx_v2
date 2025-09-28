@@ -8,11 +8,16 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animations/animations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import 'dart:ui';
 
 import '../services/enhanced_portfolio_provider.dart';
+import '../services/gemini_ai_service.dart';
+import '../services/real_time_data_service.dart';
+import '../services/news_service.dart';
+import 'full_news_screen.dart';
 import '../theme/liquid_material_theme.dart';
 import '../widgets/liquid_card.dart';
 import '../widgets/liquid_sparkline_chart.dart';
@@ -28,46 +33,46 @@ import 'ai_mentor_screen.dart';
 // IMPROVEMENT: Typography now pulls colors from the theme for Material You compatibility.
 class LiquidTextStyle {
   static TextStyle headlineLarge(BuildContext context) => GoogleFonts.manrope(
-        fontSize: 48,
-        fontWeight: FontWeight.w800,
-        color: Theme.of(context).colorScheme.onBackground,
-        letterSpacing: -1.5,
-      );
+    fontSize: 48,
+    fontWeight: FontWeight.w800,
+    color: Theme.of(context).colorScheme.onBackground,
+    letterSpacing: -1.5,
+  );
   static TextStyle headlineMedium(BuildContext context) => GoogleFonts.manrope(
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.onBackground,
-        letterSpacing: 0.5,
-      );
+    fontSize: 24,
+    fontWeight: FontWeight.w700,
+    color: Theme.of(context).colorScheme.onBackground,
+    letterSpacing: 0.5,
+  );
   static TextStyle titleLarge(BuildContext context) => GoogleFonts.manrope(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onBackground,
-      );
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: Theme.of(context).colorScheme.onBackground,
+  );
   static TextStyle titleMedium(BuildContext context) => GoogleFonts.manrope(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onBackground,
-      );
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: Theme.of(context).colorScheme.onBackground,
+  );
   static TextStyle bodyLarge(BuildContext context) => GoogleFonts.manrope(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-      );
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+  );
   static TextStyle bodyMedium(BuildContext context) => GoogleFonts.manrope(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-      );
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+  );
   static TextStyle labelMedium(BuildContext context) => GoogleFonts.manrope(
-        fontWeight: FontWeight.bold,
-        color: Theme.of(context).colorScheme.onSurface,
-      );
+    fontWeight: FontWeight.bold,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
   static TextStyle labelSmall(BuildContext context) => GoogleFonts.manrope(
-        fontWeight: FontWeight.bold,
-        fontSize: 10,
-        color: Theme.of(context).colorScheme.onSurface,
-      );
+    fontWeight: FontWeight.bold,
+    fontSize: 10,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
 }
 
 /// 🎨 Advanced Particle System
@@ -115,7 +120,7 @@ class Particle {
       if (dailyChangePercent.abs() > 3.0) {
         vx +=
             (math.Random().nextDouble() - 0.5) *
-                0.02; // Random horizontal drift
+            0.02; // Random horizontal drift
       }
     }
   }
@@ -302,13 +307,13 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
           vsync: this,
           duration: const Duration(milliseconds: 1000),
         )..addListener(() {
-            setState(() {
-              _tilt = Offset(
-                _xSpring?.x(_tiltController.value) ?? 0,
-                _ySpring?.x(_tiltController.value) ?? 0,
-              );
-            });
+          setState(() {
+            _tilt = Offset(
+              _xSpring?.x(_tiltController.value) ?? 0,
+              _ySpring?.x(_tiltController.value) ?? 0,
+            );
           });
+        });
 
     _magneticController = AnimationController(
       vsync: this,
@@ -431,7 +436,7 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
   void _startCardTilt(Offset localPosition, Size cardSize) {
     final targetX =
         (localPosition.dy / cardSize.height - 0.5) *
-            -0.3; // Increased tilt range
+        -0.3; // Increased tilt range
     final targetY = (localPosition.dx / cardSize.width - 0.5) * 0.3;
 
     _xSpring = SpringSimulation(
@@ -507,11 +512,11 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
         pageBuilder: (_, __, ___) => destination,
         transitionsBuilder: (_, animation, secondaryAnimation, child) =>
             SharedAxisTransition(
-          animation: animation,
-          secondaryAnimation: secondaryAnimation,
-          transitionType: SharedAxisTransitionType.horizontal,
-          child: child,
-        ),
+              animation: animation,
+              secondaryAnimation: secondaryAnimation,
+              transitionType: SharedAxisTransitionType.horizontal,
+              child: child,
+            ),
         transitionDuration: const Duration(milliseconds: 400),
       ),
     );
@@ -555,6 +560,7 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                           _buildHeroPortfolioCard(),
                           _buildSectionHeader(context, "Quick Actions"),
                           _buildQuickActionCards(),
+                          _buildAPITestButton(),
                           _buildSectionHeader(context, "Your Holdings"),
                           _buildHoldingsCard(),
                           _buildSectionHeader(
@@ -563,6 +569,8 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                             withRefresh: true,
                           ),
                           _buildMarketMoversSection(),
+                          _buildSectionHeader(context, "Financial News"),
+                          _buildNewsSection(),
                           _buildSectionHeader(context, "Daily Quests"),
                           _buildDailyQuestsSection(),
                           _buildSectionHeader(context, "Recent Achievements"),
@@ -588,19 +596,16 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
     return AnimatedBuilder(
       animation: _auroraController,
       builder: (context, child) {
-        final colorScheme = Theme.of(context).colorScheme;
         return Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color.lerp(
-                  colorScheme.background,
-                  colorScheme.primary.withOpacity(0.03),
-                  _auroraController.value,
-                )!,
-                colorScheme.background,
+                Color(0xFF000000), // Super dark black
+                Color(0xFF000000), // Super dark black
+                Color(0xFF000000), // Super dark black
+                Color(0xFF000000), // Super dark black
               ],
             ),
           ),
@@ -814,9 +819,9 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                                 'Syncing with markets...',
                                 style: LiquidTextStyle.bodyMedium(context)
                                     .copyWith(
-                                  color: Colors.white70,
-                                  fontStyle: FontStyle.italic,
-                                ),
+                                      color: Colors.white70,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                               ),
                             ),
                           ),
@@ -876,16 +881,16 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                                           : '\$0.00 (0.0%) Today',
                                       style: LiquidTextStyle.bodyMedium(context)
                                           .copyWith(
-                                        color:
-                                            dayGain >= 0 || totalValue == 0
+                                            color:
+                                                dayGain >= 0 || totalValue == 0
                                                 ? Theme.of(
                                                     context,
                                                   ).colorScheme.primary
                                                 : Theme.of(
                                                     context,
                                                   ).colorScheme.error,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -981,7 +986,7 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                 return Transform.translate(
                   offset:
                       Offset(0, isHovered ? -5 : 0) +
-                          Offset(0, scrollDelta * 0.2),
+                      Offset(0, scrollDelta * 0.2),
                   child: LiquidCard(
                     onTap: onTap,
                     child: Padding(
@@ -1004,10 +1009,10 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                                     BoxShadow(
                                       color:
                                           LiquidMaterialTheme.neonAccent(
-                                        context,
-                                      ).withOpacity(
-                                        0.3 + (_glowAnimation.value * 0.2),
-                                      ),
+                                            context,
+                                          ).withOpacity(
+                                            0.3 + (_glowAnimation.value * 0.2),
+                                          ),
                                       blurRadius:
                                           16.0 + (_glowAnimation.value * 8.0),
                                       spreadRadius: 2.0,
@@ -1319,14 +1324,14 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                                             '${stock['changePercent'] >= 0 ? '+' : ''}${stock['changePercent'].toStringAsFixed(1)}%',
                                             style:
                                                 LiquidTextStyle.labelMedium(
-                                              context,
-                                            ).copyWith(
-                                              color:
-                                                  stock['changePercent'] >=
+                                                  context,
+                                                ).copyWith(
+                                                  color:
+                                                      stock['changePercent'] >=
                                                           0
                                                       ? const Color(0xFF00E676)
                                                       : const Color(0xFFFF5277),
-                                            ),
+                                                ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -1442,7 +1447,10 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
     );
   }
 
-  Widget _buildQuestInProgressState(BuildContext context, Map<String, dynamic> quest) {
+  Widget _buildQuestInProgressState(
+    BuildContext context,
+    Map<String, dynamic> quest,
+  ) {
     double progress = _questProgress / _questGoal;
     return Padding(
       key: const ValueKey('in_progress'),
@@ -1493,7 +1501,10 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
     );
   }
 
-  Widget _buildQuestCompleteState(BuildContext context, Map<String, dynamic> quest) {
+  Widget _buildQuestCompleteState(
+    BuildContext context,
+    Map<String, dynamic> quest,
+  ) {
     return Padding(
       key: const ValueKey('complete'),
       padding: const EdgeInsets.all(16.0),
@@ -1919,5 +1930,591 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
         'isUnlocked': false,
       },
     ];
+  }
+
+  Widget _buildAPITestButton() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: LiquidCard(
+          onTap: _testAllAPIs,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.api,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Test All APIs',
+                        style: LiquidTextStyle.titleMedium(context).copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Click to test all API connections',
+                        style: LiquidTextStyle.bodyMedium(
+                          context,
+                        ).copyWith(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _testAllAPIs() async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFA3)),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Testing all APIs...',
+                style: LiquidTextStyle.bodyMedium(context),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Test all APIs
+      final testMessage = "Hello, can you help me with my portfolio?";
+      final portfolioData = {
+        'virtualCash': 100000.0,
+        'totalValue': 105000.0,
+        'holdings': {'AAPL': 10, 'GOOGL': 5},
+        'transactionHistory': [],
+      };
+
+      // Test Gemini API
+      print('🧪 Testing Gemini API...');
+      final geminiResponse = await GeminiAIService.getPortfolioAdvice(
+        testMessage,
+        portfolioData,
+      );
+
+      // Test Finnhub API
+      print('🧪 Testing Finnhub API...');
+      print(
+        '🔑 Finnhub API Key: ${dotenv.env['FINNHUB_API_KEY']?.substring(0, 10)}...',
+      );
+      final realTimeService = context.read<RealTimeDataService>();
+      final stockData = await realTimeService.getStockData('AAPL');
+      print(
+        '📊 Finnhub response: ${stockData?.symbol} - \$${stockData?.currentPrice}',
+      );
+
+      // Test Firebase (if available)
+      print('🧪 Testing Firebase connection...');
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+
+      final results = {
+        'gemini': {
+          'status': geminiResponse.contains('trouble')
+              ? '❌ Failed'
+              : '✅ Working',
+          'response': geminiResponse.substring(0, 100) + '...',
+        },
+        'finnhub': {
+          'status': stockData != null ? '✅ Working' : '❌ Failed',
+          'response': stockData != null
+              ? 'Stock data retrieved successfully'
+              : 'Failed to get stock data',
+        },
+        'firebase': {
+          'status': firebaseUser != null ? '✅ Working' : '❌ Failed',
+          'response': firebaseUser != null
+              ? 'User authenticated'
+              : 'No user logged in',
+        },
+      };
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show result
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'API Test Result',
+                style: LiquidTextStyle.titleMedium(context),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'API Test Results:',
+                style: LiquidTextStyle.bodyMedium(
+                  context,
+                ).copyWith(color: Colors.green, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              // Gemini API Result
+              _buildAPIResult('Gemini AI', results['gemini']!),
+              const SizedBox(height: 12),
+              // Finnhub API Result
+              _buildAPIResult('Finnhub Stock Data', results['finnhub']!),
+              const SizedBox(height: 12),
+              // Firebase Result
+              _buildAPIResult('Firebase Auth', results['firebase']!),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Close',
+                style: LiquidTextStyle.labelMedium(
+                  context,
+                ).copyWith(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show error
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.error, color: Colors.red, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'API Test Failed',
+                style: LiquidTextStyle.titleMedium(context),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '❌ Gemini API connection failed',
+                style: LiquidTextStyle.bodyMedium(
+                  context,
+                ).copyWith(color: Colors.red, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Error:',
+                style: LiquidTextStyle.labelMedium(
+                  context,
+                ).copyWith(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  e.toString(),
+                  style: LiquidTextStyle.bodyMedium(
+                    context,
+                  ).copyWith(color: Colors.red, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Close',
+                style: LiquidTextStyle.labelMedium(
+                  context,
+                ).copyWith(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildAPIResult(String apiName, Map<String, String> result) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: result['status']!.contains('✅')
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: result['status']!.contains('✅')
+              ? Colors.green.withOpacity(0.3)
+              : Colors.red.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                apiName,
+                style: LiquidTextStyle.labelMedium(
+                  context,
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              Text(
+                result['status']!,
+                style: LiquidTextStyle.labelSmall(context).copyWith(
+                  color: result['status']!.contains('✅')
+                      ? Colors.green
+                      : Colors.red,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            result['response']!,
+            style: LiquidTextStyle.bodyMedium(
+              context,
+            ).copyWith(fontSize: 12, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- News Section ---
+  Widget _buildNewsSection() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: _horizontalPadding,
+        child: FutureBuilder<List<NewsArticle>>(
+          future: context.read<NewsService>().getFinancialNews(
+            pageSize: 3,
+          ), // Reduced to 3 for better performance
+          builder: (context, snapshot) {
+            // Show loading only for the first time
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return _buildNewsLoadingCard();
+            }
+
+            // Show error state if there's an error and no cached data
+            if (snapshot.hasError && !snapshot.hasData) {
+              return _buildNewsErrorCard();
+            }
+
+            // Show cached data or fallback if no data
+            final articles = snapshot.data ?? [];
+            if (articles.isEmpty) {
+              return _buildNewsErrorCard();
+            }
+
+            return Column(
+              children: [
+                _buildNewsCard(articles[0], isMain: true),
+                if (articles.length > 1) ...[
+                  const SizedBox(height: 12),
+                  ...articles
+                      .skip(1)
+                      .take(2) // Limit to 2 additional articles
+                      .map(
+                        (article) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildNewsCard(article, isMain: false),
+                        ),
+                      ),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewsLoadingCard() {
+    return LiquidCard(
+      child: Container(
+        height: 200,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading financial news...',
+              style: LiquidTextStyle.bodyMedium(
+                context,
+              ).copyWith(color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewsErrorCard() {
+    return LiquidCard(
+      child: Container(
+        height: 120,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.newspaper_outlined,
+              color: Theme.of(context).colorScheme.primary,
+              size: 32,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Financial News',
+              style: LiquidTextStyle.titleMedium(
+                context,
+              ).copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Stay updated with the latest market news',
+              style: LiquidTextStyle.bodyMedium(
+                context,
+              ).copyWith(color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewsCard(NewsArticle article, {required bool isMain}) {
+    return LiquidCard(
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          _navigateWithFluidTransition(const FullNewsScreen());
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: isMain
+              ? _buildMainNewsCard(article)
+              : _buildSecondaryNewsCard(article),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainNewsCard(NewsArticle article) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'FEATURED',
+                style: LiquidTextStyle.labelSmall(context).copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              article.timeAgo,
+              style: LiquidTextStyle.labelSmall(
+                context,
+              ).copyWith(color: Colors.white60, fontSize: 11),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          article.title,
+          style: LiquidTextStyle.titleMedium(context).copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          article.description,
+          style: LiquidTextStyle.bodyMedium(
+            context,
+          ).copyWith(color: Colors.white70, height: 1.4),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Icon(Icons.source, size: 14, color: Colors.white60),
+            const SizedBox(width: 4),
+            Text(
+              article.source,
+              style: LiquidTextStyle.labelSmall(
+                context,
+              ).copyWith(color: Colors.white60, fontSize: 11),
+            ),
+            const Spacer(),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 12,
+              color: Colors.white.withOpacity(0.4),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSecondaryNewsCard(NewsArticle article) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                article.title,
+                style: LiquidTextStyle.bodyMedium(context).copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                  height: 1.3,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    article.timeAgo,
+                    style: LiquidTextStyle.labelSmall(
+                      context,
+                    ).copyWith(color: Colors.white60, fontSize: 10),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.source, size: 12, color: Colors.white60),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      article.source,
+                      style: LiquidTextStyle.labelSmall(
+                        context,
+                      ).copyWith(color: Colors.white60, fontSize: 10),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Icon(
+          Icons.arrow_forward_ios,
+          size: 12,
+          color: Colors.white.withOpacity(0.4),
+        ),
+      ],
+    );
   }
 }

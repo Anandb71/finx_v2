@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
-import 'dart:math' as math;
 import '../services/gemini_ai_service.dart';
 import '../services/enhanced_portfolio_provider.dart';
+import '../services/ai_mentor_state_service.dart';
 import '../theme/liquid_material_theme.dart';
 import '../widgets/liquid_card.dart';
 import '../utils/liquid_text_style.dart';
@@ -35,6 +35,10 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     super.initState();
     _setupAnimations();
     _initializeAI();
+    // Notify that AI mentor is open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AIMentorStateService>().setAIMentorOpen(true);
+    });
   }
 
   void _initializeAI() async {
@@ -138,6 +142,23 @@ class _AIMentorScreenState extends State<AIMentorScreen>
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
               child: Row(
                 children: [
+                  // Back button
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
                   Icon(
                     Icons.psychology_outlined,
                     color: LiquidMaterialTheme.neonAccent(context),
@@ -409,7 +430,20 @@ class _AIMentorScreenState extends State<AIMentorScreen>
 
   void _getAIResponse(String userMessage) async {
     try {
-      final response = await GeminiAIService.getFinancialAdvice(userMessage);
+      // Get portfolio data for context
+      final portfolio = context.read<EnhancedPortfolioProvider>();
+      final portfolioData = {
+        'virtualCash': portfolio.virtualCash,
+        'totalValue': portfolio.totalValue,
+        'holdings': portfolio.holdings,
+        'transactionHistory': portfolio.transactionHistory,
+      };
+
+      // Use portfolio-aware AI response
+      final response = await GeminiAIService.getPortfolioAdvice(
+        userMessage,
+        portfolioData,
+      );
       setState(() {
         _messages.add(
           ChatMessage(text: response, isUser: false, timestamp: DateTime.now()),

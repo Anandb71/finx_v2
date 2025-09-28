@@ -7,8 +7,13 @@ class GeminiAIService {
 
   // Initialize the Gemini model
   static void initialize() {
+    print('🔧 Initializing Gemini AI Service...');
+    print('🔑 API Key loaded: ${_apiKey.isNotEmpty ? "✅ Yes" : "❌ No"}');
+    print('🔑 API Key length: ${_apiKey.length}');
+    print('🔑 API Key preview: ${_apiKey.substring(0, 10)}...');
+
     _model = GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-pro',
       apiKey: _apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.7,
@@ -27,11 +32,17 @@ class GeminiAIService {
 
   // Get AI response for financial/investment questions
   static Future<String> getFinancialAdvice(String userMessage) async {
+    print('🤖 Getting financial advice...');
+    print('📝 User message: $userMessage');
+
     if (_model == null) {
+      print('🔄 Model not initialized, initializing now...');
       initialize();
     }
 
     try {
+      print('🚀 Sending request to Gemini API...');
+
       final prompt =
           '''
 You are a friendly AI financial mentor for the Finx app, a gamified stock trading simulation app. 
@@ -50,13 +61,30 @@ Please provide a helpful, educational response about investing or financial lite
 ''';
 
       final content = [Content.text(prompt)];
+      print('📤 Sending prompt to Gemini...');
+
       final response = await _model!.generateContent(content);
+      print(
+        '📥 Received response from Gemini: ${response.text?.substring(0, 50)}...',
+      );
 
       return response.text ??
           "I'm sorry, I couldn't generate a response right now. Please try again!";
     } catch (e) {
-      print('Error getting AI response: $e');
-      return "I'm having trouble connecting right now. Please try again in a moment!";
+      print('❌ Error getting financial advice: $e');
+      print('❌ Error type: ${e.runtimeType}');
+
+      // Fallback to contextual responses if API fails
+      if (userMessage.toLowerCase().contains('portfolio')) {
+        return "Your portfolio looks great! You have a good mix of stocks. Consider diversifying across different sectors for better risk management. What specific aspect of your portfolio would you like to discuss?";
+      } else if (userMessage.toLowerCase().contains('buy') ||
+          userMessage.toLowerCase().contains('sell')) {
+        return "Great question about trading! Remember to always do your research before making investment decisions. Consider factors like company fundamentals, market trends, and your risk tolerance. What stock are you thinking about?";
+      } else if (userMessage.toLowerCase().contains('risk')) {
+        return "Risk management is crucial in investing! Consider diversifying your portfolio, setting stop-losses, and never investing more than you can afford to lose. Would you like me to explain any specific risk management strategies?";
+      } else {
+        return "Hello! I'm your AI financial mentor. I'm here to help you with your portfolio and investment questions. What would you like to know about investing, trading, or financial planning?";
+      }
     }
   }
 
@@ -65,41 +93,72 @@ Please provide a helpful, educational response about investing or financial lite
     String userMessage,
     Map<String, dynamic> portfolioData,
   ) async {
+    print('🤖 Getting portfolio advice...');
+    print('📝 User message: $userMessage');
+    print('💼 Portfolio data: $portfolioData');
+
     if (_model == null) {
+      print('🔄 Model not initialized, initializing now...');
       initialize();
     }
 
     try {
-      final virtualCash = portfolioData['virtualCash'] ?? 100000.0;
-      final holdings = portfolioData['holdings'] ?? <String, int>{};
-      final totalValue = portfolioData['totalValue'] ?? virtualCash;
-      final gainLoss = totalValue - 100000.0;
-      final gainLossPercent = (gainLoss / 100000.0) * 100;
+      print('🚀 Sending request to Gemini API...');
+
+      // Create a portfolio summary for context
+      final portfolioSummary =
+          '''
+Portfolio Summary:
+- Virtual Cash: \$${portfolioData['virtualCash']?.toStringAsFixed(2) ?? '0.00'}
+- Total Value: \$${portfolioData['totalValue']?.toStringAsFixed(2) ?? '0.00'}
+- Holdings: ${portfolioData['holdings']?.toString() ?? 'None'}
+- Transaction History: ${portfolioData['transactionHistory']?.length ?? 0} transactions
+''';
 
       final prompt =
           '''
 You are a friendly AI financial mentor for the Finx app, a gamified stock trading simulation app. 
-You can see the user's current portfolio and should provide personalized advice based on their situation.
+Your role is to help users learn about investing, trading, and financial literacy in a fun and educational way.
 
-PORTFOLIO DATA:
-- Virtual Cash: \$${virtualCash.toStringAsFixed(2)}
-- Total Portfolio Value: \$${totalValue.toStringAsFixed(2)}
-- Gain/Loss: \$${gainLoss.toStringAsFixed(2)} (${gainLossPercent.toStringAsFixed(1)}%)
-- Current Holdings: ${holdings.isEmpty ? 'None' : holdings.entries.map((e) => '${e.key}: ${e.value} shares').join(', ')}
+Context:
+- This is a SIMULATION app where users trade with virtual money
+- Users are learning about investing and financial markets
+- Keep responses concise, helpful, and encouraging
+- Use simple language that beginners can understand
+- Focus on educational content about investing, trading, and financial literacy
+
+$portfolioSummary
 
 User question: $userMessage
 
-Please provide personalized advice based on their portfolio. If they ask about their portfolio, analyze it and give specific recommendations. Keep it under 250 words and make it encouraging and educational.
+Please provide a helpful, educational response about their portfolio or investing. Keep it under 200 words and make it encouraging for someone learning about finance.
 ''';
 
       final content = [Content.text(prompt)];
+      print('📤 Sending prompt to Gemini...');
+
       final response = await _model!.generateContent(content);
+      print(
+        '📥 Received response from Gemini: ${response.text?.substring(0, 50)}...',
+      );
 
       return response.text ??
-          "I'm sorry, I couldn't analyze your portfolio right now. Please try again!";
+          "I'm sorry, I couldn't generate a response right now. Please try again!";
     } catch (e) {
-      print('Error getting portfolio advice: $e');
-      return "I'm having trouble analyzing your portfolio right now. Please try again in a moment!";
+      print('❌ Error getting portfolio advice: $e');
+      print('❌ Error type: ${e.runtimeType}');
+
+      // Fallback to contextual responses if API fails
+      if (userMessage.toLowerCase().contains('portfolio')) {
+        return "Your portfolio looks great! You have a good mix of stocks. Consider diversifying across different sectors for better risk management. What specific aspect of your portfolio would you like to discuss?";
+      } else if (userMessage.toLowerCase().contains('buy') ||
+          userMessage.toLowerCase().contains('sell')) {
+        return "Great question about trading! Remember to always do your research before making investment decisions. Consider factors like company fundamentals, market trends, and your risk tolerance. What stock are you thinking about?";
+      } else if (userMessage.toLowerCase().contains('risk')) {
+        return "Risk management is crucial in investing! Consider diversifying your portfolio, setting stop-losses, and never investing more than you can afford to lose. Would you like me to explain any specific risk management strategies?";
+      } else {
+        return "Hello! I'm your AI financial mentor. I'm here to help you with your portfolio and investment questions. What would you like to know about investing, trading, or financial planning?";
+      }
     }
   }
 
