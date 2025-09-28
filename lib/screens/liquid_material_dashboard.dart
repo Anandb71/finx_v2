@@ -914,8 +914,8 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
     return SliverPadding(
       padding: _horizontalPadding,
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 300,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           childAspectRatio: 1.0,

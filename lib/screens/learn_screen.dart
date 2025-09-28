@@ -261,8 +261,8 @@ class _LearnScreenState extends State<LearnScreen>
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 280,
           childAspectRatio: 0.85,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,

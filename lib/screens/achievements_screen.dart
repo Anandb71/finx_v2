@@ -275,8 +275,8 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 280,
                     childAspectRatio: 0.8,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
