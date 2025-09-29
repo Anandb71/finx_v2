@@ -50,6 +50,20 @@ class _TradeScreenState extends State<TradeScreen>
     _initializeAnimations();
     _startAnimations();
     _setupQuantityListener();
+    _loadRealTimeData();
+  }
+
+  void _loadRealTimeData() async {
+    final symbol = _stockSymbol;
+    final portfolio = context.read<EnhancedPortfolioProvider>();
+
+    // Fetch real-time data for the stock
+    final stockData = await portfolio.fetchStockData(symbol);
+    if (stockData != null && mounted) {
+      setState(() {
+        // Update with real-time data
+      });
+    }
   }
 
   void _setupQuantityListener() {
@@ -59,10 +73,13 @@ class _TradeScreenState extends State<TradeScreen>
   }
 
   void _updateEstimatedCost() {
-    final quantity = int.tryParse(_quantityController.text) ?? 0;
+    final quantityText = _quantityController.text.trim();
+    final quantity = int.tryParse(quantityText) ?? 0;
     final price = _currentPrice;
+
+    // Update immediately as user types
     setState(() {
-      _estimatedCost = (quantity * price).toDouble();
+      _estimatedCost = quantity > 0 ? (quantity * price) : 0.0;
     });
   }
 
@@ -120,12 +137,32 @@ class _TradeScreenState extends State<TradeScreen>
     final portfolio = context.read<EnhancedPortfolioProvider>();
     final symbol = _stockSymbol;
     final stockData = portfolio.getStockData(symbol);
-    if (stockData != null) {
+    if (stockData != null && stockData.currentPrice > 0) {
       return stockData.currentPrice;
     }
-    return widget.stockData['price']?.toDouble() ??
-        widget.stockData['currentPrice']?.toDouble() ??
-        248.50;
+
+    // Try to get real-time data if not cached
+    final realTimePrice =
+        widget.stockData['price']?.toDouble() ??
+        widget.stockData['currentPrice']?.toDouble();
+
+    if (realTimePrice != null && realTimePrice > 0) {
+      return realTimePrice;
+    }
+
+    // Last resort: fetch from API or use realistic default
+    _fetchRealTimePrice(symbol);
+    return 150.25; // Realistic AAPL price instead of 248.50
+  }
+
+  void _fetchRealTimePrice(String symbol) async {
+    final portfolio = context.read<EnhancedPortfolioProvider>();
+    final stockData = await portfolio.fetchStockData(symbol);
+    if (stockData != null && mounted) {
+      setState(() {
+        // Trigger rebuild with real-time data
+      });
+    }
   }
 
   String get _stockSymbol => widget.stockData['symbol'] ?? 'AAPL';
@@ -188,13 +225,20 @@ class _TradeScreenState extends State<TradeScreen>
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
-      final success = await portfolio.executeTrade(
-        symbol: _stockSymbol,
-        quantity: quantity,
-        type: _tradeMode == TradeMode.buy
-            ? TransactionType.buy
-            : TransactionType.sell,
-      );
+      bool success;
+      if (_tradeMode == TradeMode.buy) {
+        success = await portfolio.buyStock(
+          _stockSymbol,
+          quantity,
+          _currentPrice,
+        );
+      } else {
+        success = await portfolio.sellStock(
+          _stockSymbol,
+          quantity,
+          _currentPrice,
+        );
+      }
 
       setState(() {
         _isTrading = false;
@@ -754,6 +798,13 @@ class _TradeScreenState extends State<TradeScreen>
         TextField(
           controller: _quantityController,
           keyboardType: TextInputType.number,
+          onChanged: (value) {
+            // Ensure real-time updates as user types
+            _updateEstimatedCost();
+            setState(() {
+              _errorMessage = null;
+            });
+          },
           style: GoogleFonts.manrope(
             fontSize: 18,
             color: Theme.of(context).colorScheme.onSurface,
@@ -788,11 +839,6 @@ class _TradeScreenState extends State<TradeScreen>
               vertical: 16,
             ),
           ),
-          onChanged: (value) {
-            setState(() {
-              _errorMessage = null;
-            });
-          },
         ),
       ],
     );

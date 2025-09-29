@@ -101,61 +101,6 @@ class AchievementService extends ChangeNotifier {
     ]);
   }
 
-  Future<void> checkForAchievements(EnhancedPortfolioProvider portfolio) async {
-    final userId = 'current_user'; // In a real app, get from auth
-
-    // Check each achievement
-    for (final achievement in _allAchievements) {
-      if (!_unlockedAchievements.any((a) => a.id == achievement.id)) {
-        bool shouldUnlock = false;
-
-        switch (achievement.id) {
-          case 'first_trade':
-            shouldUnlock = portfolio.transactionHistory.isNotEmpty;
-            break;
-          case 'portfolio_master':
-            shouldUnlock = portfolio.totalValue >= 100000;
-            break;
-          case 'diversified_investor':
-            shouldUnlock = portfolio.holdings.length >= 5;
-            break;
-          case 'profit_maker':
-            shouldUnlock = portfolio.transactionHistory.any(
-              (t) => t.type == TransactionType.sell && t.totalValue > 1000,
-            );
-            break;
-          case 'consistent_trader':
-            shouldUnlock = portfolio.transactionHistory.length >= 10;
-            break;
-          case 'risk_taker':
-            final investedAmount = portfolio.totalValue - portfolio.virtualCash;
-            shouldUnlock = investedAmount > (portfolio.virtualCash * 0.5);
-            break;
-          case 'patient_investor':
-            // This would need more complex logic to track holding duration
-            shouldUnlock = false; // Placeholder
-            break;
-          case 'market_analyst':
-            // This would need to track chart analysis usage
-            shouldUnlock = false; // Placeholder
-            break;
-          case 'quiz_master':
-            // This would need to track quiz scores
-            shouldUnlock = false; // Placeholder
-            break;
-          case 'simulation_expert':
-            // This would need to track simulator usage
-            shouldUnlock = false; // Placeholder
-            break;
-        }
-
-        if (shouldUnlock) {
-          await unlockAchievement(achievement, userId);
-        }
-      }
-    }
-  }
-
   Future<void> unlockAchievement(Achievement achievement, String userId) async {
     if (_unlockedAchievements.any((a) => a.id == achievement.id)) {
       return; // Already unlocked
@@ -231,6 +176,72 @@ class AchievementService extends ChangeNotifier {
 
   List<Achievement> getUnlockedAchievementsByCategory(String category) {
     return _unlockedAchievements.where((a) => a.category == category).toList();
+  }
+
+  /// Check for new achievements based on portfolio state
+  Future<void> checkForAchievements(EnhancedPortfolioProvider portfolio) async {
+    final List<String> newlyUnlocked = [];
+
+    // Check first trade achievement
+    if (!isAchievementUnlocked('first_trade') &&
+        portfolio.transactions.isNotEmpty) {
+      newlyUnlocked.add('first_trade');
+    }
+
+    // Check portfolio value achievement
+    if (!isAchievementUnlocked('portfolio_master') &&
+        portfolio.totalValue >= 100000) {
+      newlyUnlocked.add('portfolio_master');
+    }
+
+    // Check diversified investor achievement
+    if (!isAchievementUnlocked('diversified_investor') &&
+        portfolio.holdings.length >= 5) {
+      newlyUnlocked.add('diversified_investor');
+    }
+
+    // Check profit maker achievement
+    if (!isAchievementUnlocked('profit_maker')) {
+      for (final transaction in portfolio.transactions) {
+        if (transaction.type == TransactionType.sell) {
+          final avgPrice = portfolio.getAveragePurchasePrice(
+            transaction.symbol,
+          );
+          final profit = (transaction.price - avgPrice) * transaction.quantity;
+          if (profit >= 1000) {
+            newlyUnlocked.add('profit_maker');
+            break;
+          }
+        }
+      }
+    }
+
+    // Unlock new achievements
+    for (final achievementId in newlyUnlocked) {
+      final achievement = _allAchievements.firstWhere(
+        (a) => a.id == achievementId,
+      );
+      _unlockedAchievements.add(achievement);
+
+      // Save to Firestore
+      try {
+        await _firestore.collection('achievements').doc(achievementId).set({
+          'id': achievement.id,
+          'title': achievement.title,
+          'description': achievement.description,
+          'icon': achievement.icon,
+          'points': achievement.points,
+          'category': achievement.category,
+          'unlockedAt': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        print('Error saving achievement: $e');
+      }
+    }
+
+    if (newlyUnlocked.isNotEmpty) {
+      notifyListeners();
+    }
   }
 }
 

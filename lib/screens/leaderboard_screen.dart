@@ -317,7 +317,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     return [
       LeaderboardEntry(
         name: 'You',
-        level: portfolio.userLevel,
+        level: _calculateUserLevel(portfolio.totalValue),
         value: portfolio.totalValue,
         change: portfolio.dayGainPercent,
         isCurrentUser: true,
@@ -349,5 +349,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   double _getUserScore(EnhancedPortfolioProvider portfolio) {
     return portfolio.totalValue;
+  }
+
+  int _calculateUserLevel(double totalValue) {
+    // Simple level calculation based on portfolio value
+    if (totalValue >= 200000) return 20;
+    if (totalValue >= 150000) return 15;
+    if (totalValue >= 120000) return 12;
+    if (totalValue >= 100000) return 10;
+    if (totalValue >= 80000) return 8;
+    if (totalValue >= 60000) return 6;
+    if (totalValue >= 40000) return 4;
+    return 1;
   }
 }

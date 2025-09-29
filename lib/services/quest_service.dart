@@ -118,66 +118,6 @@ class QuestService extends ChangeNotifier {
     ]);
   }
 
-  Future<void> checkQuests(EnhancedPortfolioProvider portfolio) async {
-    // Update progress for all active quests
-    for (final quest in _activeQuests) {
-      if (!quest.isCompleted) {
-        await _updateQuestProgress(quest, portfolio);
-      }
-    }
-
-    // Check for new quests that can be started
-    await _checkForNewQuests(portfolio);
-  }
-
-  Future<void> _updateQuestProgress(
-    Quest quest,
-    EnhancedPortfolioProvider portfolio,
-  ) async {
-    int newProgress = 0;
-    bool isCompleted = false;
-
-    switch (quest.id) {
-      case 'first_trade_quest':
-        newProgress = portfolio.transactionHistory.length;
-        isCompleted = newProgress >= quest.requirements['trades']!;
-        break;
-      case 'diversify_portfolio':
-        newProgress = portfolio.holdings.length;
-        isCompleted = newProgress >= quest.requirements['holdings']!;
-        break;
-      case 'profit_quest':
-        final totalProfit = portfolio.transactionHistory
-            .where((t) => t.type == TransactionType.sell)
-            .fold(0.0, (sum, t) => sum + t.totalValue);
-        newProgress = totalProfit.toInt();
-        isCompleted = newProgress >= quest.requirements['profit']!;
-        break;
-      case 'consistent_trader_quest':
-        newProgress = portfolio.transactionHistory.length;
-        isCompleted = newProgress >= quest.requirements['trades']!;
-        break;
-      case 'wealth_builder_quest':
-        newProgress = portfolio.totalValue.toInt();
-        isCompleted = newProgress >= quest.requirements['portfolio_value']!;
-        break;
-      default:
-        // For learning quests, progress would be tracked separately
-        break;
-    }
-
-    if (newProgress != quest.progress) {
-      quest.progress = newProgress;
-      quest.isCompleted = isCompleted;
-
-      if (isCompleted) {
-        await _completeQuest(quest);
-      }
-
-      notifyListeners();
-    }
-  }
-
   Future<void> _checkForNewQuests(EnhancedPortfolioProvider portfolio) async {
     // Auto-start certain quests based on portfolio state
     final availableQuests = _allQuests
@@ -361,6 +301,84 @@ class QuestService extends ChangeNotifier {
 
   List<Quest> getActiveQuestsByCategory(String category) {
     return _activeQuests.where((q) => q.category == category).toList();
+  }
+
+  /// Check quest progress based on portfolio state
+  Future<void> checkQuests(EnhancedPortfolioProvider portfolio) async {
+    final List<Quest> newlyCompleted = [];
+
+    for (final quest in _activeQuests) {
+      if (quest.isCompleted) continue;
+
+      bool isCompleted = false;
+      int newProgress = 0;
+
+      switch (quest.id) {
+        case 'first_trade_quest':
+          newProgress = portfolio.transactions.length;
+          isCompleted = newProgress >= quest.requirements['trades']!;
+          break;
+
+        case 'diversify_portfolio':
+          newProgress = portfolio.holdings.length;
+          isCompleted = newProgress >= quest.requirements['holdings']!;
+          break;
+
+        case 'profit_quest':
+          // Calculate total profit from sell transactions
+          double totalProfit = 0;
+          for (final transaction in portfolio.transactions) {
+            if (transaction.type == TransactionType.sell) {
+              final avgPrice = portfolio.getAveragePurchasePrice(
+                transaction.symbol,
+              );
+              final profit =
+                  (transaction.price - avgPrice) * transaction.quantity;
+              totalProfit += profit;
+            }
+          }
+          newProgress = totalProfit.toInt();
+          isCompleted = totalProfit >= quest.requirements['profit']!;
+          break;
+
+        case 'portfolio_value_quest':
+          newProgress = portfolio.totalValue.toInt();
+          isCompleted = portfolio.totalValue >= quest.requirements['value']!;
+          break;
+      }
+
+      // Update quest progress
+      quest.progress = newProgress;
+      if (isCompleted && !quest.isCompleted) {
+        quest.isCompleted = true;
+        newlyCompleted.add(quest);
+        _completedQuests.add(quest);
+        _activeQuests.remove(quest);
+
+        // Save to Firestore
+        try {
+          await _firestore.collection('quests').doc(quest.id).set({
+            'id': quest.id,
+            'title': quest.title,
+            'description': quest.description,
+            'icon': quest.icon,
+            'points': quest.points,
+            'category': quest.category,
+            'difficulty': quest.difficulty,
+            'requirements': quest.requirements,
+            'progress': quest.progress,
+            'isCompleted': quest.isCompleted,
+            'completedAt': DateTime.now().toIso8601String(),
+          });
+        } catch (e) {
+          print('Error saving quest: $e');
+        }
+      }
+    }
+
+    if (newlyCompleted.isNotEmpty) {
+      notifyListeners();
+    }
   }
 }
 

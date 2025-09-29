@@ -13,7 +13,7 @@ class GeminiAIService {
     print('🔑 API Key preview: ${_apiKey.substring(0, 10)}...');
 
     _model = GenerativeModel(
-      model: 'gemini-1.5-pro',
+      model: 'gemini-pro',
       apiKey: _apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.7,
@@ -88,7 +88,7 @@ Please provide a helpful, educational response about investing or financial lite
     }
   }
 
-  // Get AI response with portfolio context
+  // Get portfolio-aware AI advice
   static Future<String> getPortfolioAdvice(
     String userMessage,
     Map<String, dynamic> portfolioData,
@@ -105,15 +105,10 @@ Please provide a helpful, educational response about investing or financial lite
     try {
       print('🚀 Sending request to Gemini API...');
 
-      // Create a portfolio summary for context
-      final portfolioSummary =
-          '''
-Portfolio Summary:
-- Virtual Cash: \$${portfolioData['virtualCash']?.toStringAsFixed(2) ?? '0.00'}
-- Total Value: \$${portfolioData['totalValue']?.toStringAsFixed(2) ?? '0.00'}
-- Holdings: ${portfolioData['holdings']?.toString() ?? 'None'}
-- Transaction History: ${portfolioData['transactionHistory']?.length ?? 0} transactions
-''';
+      final holdings = portfolioData['holdings'] as Map<String, int>? ?? {};
+      final virtualCash = portfolioData['virtualCash'] as double? ?? 0.0;
+      final totalValue = portfolioData['totalValue'] as double? ?? 0.0;
+      final transactions = portfolioData['transactionHistory'] as List? ?? [];
 
       final prompt =
           '''
@@ -127,11 +122,15 @@ Context:
 - Use simple language that beginners can understand
 - Focus on educational content about investing, trading, and financial literacy
 
-$portfolioSummary
+Current Portfolio Data:
+- Virtual Cash: \$${virtualCash.toStringAsFixed(2)}
+- Total Portfolio Value: \$${totalValue.toStringAsFixed(2)}
+- Current Holdings: ${holdings.keys.join(', ')}
+- Number of Transactions: ${transactions.length}
 
 User question: $userMessage
 
-Please provide a helpful, educational response about their portfolio or investing. Keep it under 200 words and make it encouraging for someone learning about finance.
+Please provide a helpful, educational response about investing or financial literacy based on their portfolio. Keep it under 200 words and make it encouraging for someone learning about finance.
 ''';
 
       final content = [Content.text(prompt)];

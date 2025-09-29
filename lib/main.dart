@@ -1,9 +1,10 @@
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/intl.dart';
 import 'firebase_options.dart';
 import 'auth/auth_gate.dart';
 import 'screens/signup_screen.dart';
@@ -41,6 +42,8 @@ void main() async {
 
   runApp(const MyApp());
 }
+
+// TODO: APIs need to be fixed on site - Finnhub and Gemini API configurations need verification
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -268,6 +271,11 @@ class _LandingPageState extends State<LandingPage>
     super.dispose();
   }
 
+  /// Get the last updated date for the website
+  String _getLastUpdatedDate() {
+    return 'Sep 29, 2025';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isWeb = MediaQuery.of(context).size.width > 800;
@@ -299,93 +307,91 @@ class _LandingPageState extends State<LandingPage>
             _buildScrollProgressIndicator(context),
             // Advanced particle system
             _buildParticleSystem(context),
-            // Main content
+            // Main content - Using single ListView for smooth scrolling
             SafeArea(
-              child: SingleChildScrollView(
+              child: ListView(
                 controller: _scrollController,
-                child: Column(
-                  children: [
-                    _buildHeader(context, isWeb),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isWeb ? 60.0 : 24.0,
-                        vertical: 32.0,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _buildHookSection(context),
-                          const SizedBox(height: 80),
-                          AnimatedBuilder(
-                            animation: _featuresAnimation,
-                            builder: (context, child) {
-                              return Transform.translate(
-                                offset: Offset(
-                                  0,
-                                  50 * (1 - _featuresAnimation.value),
-                                ),
-                                child: Opacity(
-                                  opacity: _featuresAnimation.value,
-                                  child: _buildFeaturesSection(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 80),
-                          AnimatedBuilder(
-                            animation: _aboutUsAnimation,
-                            builder: (context, child) {
-                              return Transform.translate(
-                                offset: Offset(
-                                  0,
-                                  30 * (1 - _aboutUsAnimation.value),
-                                ),
-                                child: Opacity(
-                                  opacity: _aboutUsAnimation.value,
-                                  child: _buildAboutUsSection(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 80),
-                          AnimatedBuilder(
-                            animation: _howItWorksAnimation,
-                            builder: (context, child) {
-                              return Transform.translate(
-                                offset: Offset(
-                                  0,
-                                  40 * (1 - _howItWorksAnimation.value),
-                                ),
-                                child: Opacity(
-                                  opacity: _howItWorksAnimation.value,
-                                  child: _buildHowItWorksSection(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 80),
-                          AnimatedBuilder(
-                            animation: _finalPitchAnimation,
-                            builder: (context, child) {
-                              return Transform.translate(
-                                offset: Offset(
-                                  0,
-                                  30 * (1 - _finalPitchAnimation.value),
-                                ),
-                                child: Opacity(
-                                  opacity: _finalPitchAnimation.value,
-                                  child: _buildFinalPitch(context),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 60),
-                          _buildFooter(),
-                        ],
-                      ),
+                children: [
+                  _buildHeader(context, isWeb),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWeb ? 60.0 : 24.0,
+                      vertical: 32.0,
                     ),
-                  ],
-                ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildHookSection(context),
+                        const SizedBox(height: 80),
+                        AnimatedBuilder(
+                          animation: _featuresAnimation,
+                          builder: (context, child) {
+                            return Transform.translate(
+                              offset: Offset(
+                                0,
+                                50 * (1 - _featuresAnimation.value),
+                              ),
+                              child: Opacity(
+                                opacity: _featuresAnimation.value,
+                                child: _buildFeaturesSection(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 80),
+                        AnimatedBuilder(
+                          animation: _aboutUsAnimation,
+                          builder: (context, child) {
+                            return Transform.translate(
+                              offset: Offset(
+                                0,
+                                30 * (1 - _aboutUsAnimation.value),
+                              ),
+                              child: Opacity(
+                                opacity: _aboutUsAnimation.value,
+                                child: _buildAboutUsSection(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 80),
+                        AnimatedBuilder(
+                          animation: _howItWorksAnimation,
+                          builder: (context, child) {
+                            return Transform.translate(
+                              offset: Offset(
+                                0,
+                                40 * (1 - _howItWorksAnimation.value),
+                              ),
+                              child: Opacity(
+                                opacity: _howItWorksAnimation.value,
+                                child: _buildHowItWorksSection(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 80),
+                        AnimatedBuilder(
+                          animation: _finalPitchAnimation,
+                          builder: (context, child) {
+                            return Transform.translate(
+                              offset: Offset(
+                                0,
+                                30 * (1 - _finalPitchAnimation.value),
+                              ),
+                              child: Opacity(
+                                opacity: _finalPitchAnimation.value,
+                                child: _buildFinalPitch(context),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 60),
+                        _buildFooter(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -478,138 +484,184 @@ class _LandingPageState extends State<LandingPage>
   Widget _buildHookSection(BuildContext context) {
     return Stack(
       children: [
-        // Aurora glow effect
-        _buildAuroraGlow(context),
+        // Advanced Aurora glow effect with multiple layers
+        _buildAdvancedAuroraGlow(context),
+        // Floating geometric elements
+        _buildFloatingGeometricElements(context),
         // Main content - Centered and constrained
         Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
+            constraints: const BoxConstraints(maxWidth: 800),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App Logo - Reduced size to act as accent
-                const Icon(
-                  Icons.auto_graph_rounded,
-                  color: Color(0xFF00FFA3),
-                  size: 40,
-                ),
-                const SizedBox(height: 32), // Increased spacing
-                // Main Headline - Significantly larger and bolder
-                Text(
-                  'Learn to Invest, The Fun Way.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 56, // Increased from 42
-                    fontWeight: FontWeight.w800, // Increased from bold
-                    letterSpacing: -2.0, // Increased letter spacing
-                    color: Colors.white.withOpacity(
-                      0.95,
-                    ), // Slightly more opaque
-                    height: 1.1, // Tighter line height for impact
-                  ),
-                ),
-                const SizedBox(height: 24), // Increased spacing
-                // Sub-headline
-                Text(
-                  'Simulate real-time stock trading with virtual money and AI-powered guidance.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20, // Increased from 18
-                    color: Theme.of(context).colorScheme.secondary,
-                    height: 1.6, // Increased line height for readability
-                    fontWeight: FontWeight.w400, // Added slight weight
-                  ),
-                ),
-                const SizedBox(height: 48), // Increased spacing
-                // Get Started Button - Larger and more prominent
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF00FFA3), Color(0xFF00D4FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(
-                      35,
-                    ), // Slightly more rounded
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(
-                          0xFF00FFA3,
-                        ).withOpacity(0.5), // Increased shadow opacity
-                        blurRadius: 25, // Increased blur
-                        spreadRadius: 0,
-                        offset: const Offset(0, 10), // Increased offset
+                // Animated Logo with pulsing effect
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(seconds: 3),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: 0.8 + (0.2 * value),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              const Color(0xFF00FFA3).withOpacity(0.3),
+                              const Color(0xFF00FFA3).withOpacity(0.1),
+                              Colors.transparent,
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00FFA3).withOpacity(0.5),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.auto_graph_rounded,
+                          color: Color(0xFF00FFA3),
+                          size: 60,
+                        ),
                       ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 40),
+
+                // Main Headline with gradient text and typing effect
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [
+                      Color(0xFF00FFA3),
+                      Color(0xFF00D4FF),
+                      Color(0xFF8A2BE2),
                     ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SignUpScreen(),
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 2000),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 30 * (1 - value)),
+                          child: _buildTypingText(
+                            'Learn to Invest, The Fun Way.',
+                            value,
+                          ),
                         ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.black,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 60, // Increased horizontal padding
-                        vertical: 20, // Increased vertical padding
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(35),
-                      ),
-                    ),
-                    child: const Text(
-                      'Get Started',
-                      style: TextStyle(
-                        fontSize: 22, // Increased from 18
-                        fontWeight: FontWeight.w700, // Increased weight
-                        letterSpacing: 0.5, // Added letter spacing
-                      ),
-                    ),
                   ),
                 ),
-                const SizedBox(height: 32), // Increased spacing
-                // Log In Link - Enhanced styling
-                RichText(
-                  text: TextSpan(
-                    text: 'Already have an account? ',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.secondary,
-                      fontSize: 18, // Increased from 16
-                      fontWeight: FontWeight.w400,
-                    ),
-                    children: [
-                      WidgetSpan(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            'Log In',
-                            style: TextStyle(
-                              color: const Color(0xFF00FFA3),
-                              fontSize: 18, // Increased from 16
-                              fontWeight: FontWeight.w700, // Increased weight
-                              decoration: TextDecoration.underline,
-                              decorationColor: const Color(0xFF00FFA3),
-                              decorationThickness: 2, // Thicker underline
-                            ),
+                const SizedBox(height: 32),
+
+                // Sub-headline with enhanced styling
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 2500),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, 20 * (1 - value)),
+                        child: Text(
+                          'Master the art of investing with AI-powered insights, real-time simulations, and gamified learning experiences.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 22,
+                            color: Colors.white.withOpacity(0.9),
+                            height: 1.6,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 60),
+
+                // Enhanced CTA Button with advanced animations
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 3000),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: 0.8 + (0.2 * value),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF00FFA3),
+                              Color(0xFF00D4FF),
+                              Color(0xFF8A2BE2),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(50),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00FFA3).withOpacity(0.6),
+                              blurRadius: 30,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 15),
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFF00D4FF).withOpacity(0.4),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SignUpScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 50,
+                              vertical: 20,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.rocket_launch, size: 24),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Start Trading Now',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -619,72 +671,487 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  Widget _buildAuroraGlow(BuildContext context) {
+  Widget _buildAdvancedAuroraGlow(BuildContext context) {
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
           gradient: RadialGradient(
             center: const Alignment(0.0, -0.3),
-            radius: 1.2,
+            radius: 1.5,
             colors: [
-              const Color(0xFF00FFA3).withOpacity(0.1),
-              const Color(0xFF00D4FF).withOpacity(0.015),
-              const Color(0xFF8A2BE2).withOpacity(0.01),
-              const Color(0xFF00FFA3).withOpacity(0.008),
+              const Color(0xFF00FFA3).withOpacity(0.15),
+              const Color(0xFF00D4FF).withOpacity(0.08),
+              const Color(0xFF8A2BE2).withOpacity(0.05),
+              const Color(0xFF00FFA3).withOpacity(0.03),
               Colors.transparent,
             ],
-            stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
+            stops: const [0.0, 0.2, 0.4, 0.7, 1.0],
           ),
         ),
         child: Stack(
           children: [
-            // Subtle grid pattern overlay
-            _buildGridPattern(),
-            // Animated floating orbs
-            _buildFloatingOrb(context, 0.2, 0.1, const Color(0xFF00FFA3), 80),
-            _buildFloatingOrb(context, -0.3, 0.2, const Color(0xFF00D4FF), 60),
-            _buildFloatingOrb(context, 0.4, -0.1, const Color(0xFF8A2BE2), 100),
-            _buildFloatingOrb(context, -0.2, -0.2, const Color(0xFF00FFA3), 70),
-            _buildFloatingOrb(context, 0.1, 0.3, const Color(0xFF00D4FF), 50),
-            // Additional subtle geometric elements
-            _buildGeometricElements(context),
+            // Enhanced grid pattern
+            _buildAdvancedGridPattern(),
+            // Multiple layers of floating orbs with different animations
+            _buildAnimatedFloatingOrb(
+              context,
+              0.2,
+              0.1,
+              const Color(0xFF00FFA3),
+              120,
+              0,
+            ),
+            _buildAnimatedFloatingOrb(
+              context,
+              -0.3,
+              0.2,
+              const Color(0xFF00D4FF),
+              90,
+              1,
+            ),
+            _buildAnimatedFloatingOrb(
+              context,
+              0.4,
+              -0.1,
+              const Color(0xFF8A2BE2),
+              150,
+              2,
+            ),
+            _buildAnimatedFloatingOrb(
+              context,
+              -0.2,
+              -0.2,
+              const Color(0xFF00FFA3),
+              100,
+              3,
+            ),
+            _buildAnimatedFloatingOrb(
+              context,
+              0.1,
+              0.3,
+              const Color(0xFF00D4FF),
+              80,
+              4,
+            ),
+            _buildAnimatedFloatingOrb(
+              context,
+              0.6,
+              0.0,
+              const Color(0xFF8A2BE2),
+              70,
+              5,
+            ),
+            // Advanced geometric elements
+            _buildAdvancedGeometricElements(context),
+            // Morphing shapes
+            _buildMorphingShapes(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFloatingOrb(
+  Widget _buildTypingText(String text, double progress) {
+    final visibleLength = (text.length * progress).round();
+    final visibleText = text.substring(0, visibleLength.clamp(0, text.length));
+
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: visibleText,
+            style: const TextStyle(
+              fontSize: 72,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -3.0,
+              color: Colors.white,
+              height: 1.0,
+            ),
+          ),
+          if (visibleLength < text.length)
+            TextSpan(
+              text: '|',
+              style: TextStyle(
+                fontSize: 72,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF00FFA3),
+                shadows: [
+                  Shadow(
+                    color: const Color(0xFF00FFA3).withOpacity(0.8),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingGeometricElements(BuildContext context) {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      height: MediaQuery.of(context).size.height,
+      child: Stack(
+        children: [
+          // Floating triangles
+          _buildFloatingTriangle(
+            context,
+            0.1,
+            0.2,
+            const Color(0xFF00FFA3),
+            30,
+          ),
+          _buildFloatingTriangle(
+            context,
+            0.8,
+            0.3,
+            const Color(0xFF00D4FF),
+            25,
+          ),
+          _buildFloatingTriangle(
+            context,
+            0.3,
+            0.8,
+            const Color(0xFF8A2BE2),
+            35,
+          ),
+
+          // Floating circles
+          _buildFloatingCircle(context, 0.7, 0.1, const Color(0xFF00FFA3), 20),
+          _buildFloatingCircle(context, 0.2, 0.7, const Color(0xFF00D4FF), 15),
+          _buildFloatingCircle(context, 0.9, 0.6, const Color(0xFF8A2BE2), 25),
+
+          // Floating squares
+          _buildFloatingSquare(context, 0.5, 0.1, const Color(0xFF00FFA3), 18),
+          _buildFloatingSquare(context, 0.1, 0.5, const Color(0xFF00D4FF), 22),
+          _buildFloatingSquare(context, 0.8, 0.8, const Color(0xFF8A2BE2), 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedFloatingOrb(
+    BuildContext context,
+    double x,
+    double y,
+    Color color,
+    double size,
+    int index,
+  ) {
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 3000 + (index * 500)),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Positioned(
+          left: MediaQuery.of(context).size.width * (0.5 + x * 0.4),
+          top:
+              MediaQuery.of(context).size.height * (0.3 + y * 0.3) +
+              (value * 20 * math.sin(index.toDouble())),
+          child: Transform.scale(
+            scale: 0.5 + (0.5 * value),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    color.withOpacity(0.4),
+                    color.withOpacity(0.2),
+                    Colors.transparent,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: size * 1.2,
+                    spreadRadius: size * 0.3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFloatingTriangle(
     BuildContext context,
     double x,
     double y,
     Color color,
     double size,
   ) {
-    return Positioned(
-      left: MediaQuery.of(context).size.width * (0.5 + x * 0.4),
-      top: MediaQuery.of(context).size.height * (0.3 + y * 0.3),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color.withOpacity(0.3),
-              color.withOpacity(0.1),
-              Colors.transparent,
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: size * 0.8,
-              spreadRadius: size * 0.2,
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(seconds: 4),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Positioned(
+          left: MediaQuery.of(context).size.width * x,
+          top: MediaQuery.of(context).size.height * y + (value * 30),
+          child: Transform.rotate(
+            angle: value * 2 * math.pi,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: color.withOpacity(0.3), width: 2),
+              ),
+              child: Center(
+                child: Transform.rotate(
+                  angle: -value * 2 * math.pi,
+                  child: Icon(
+                    Icons.change_history,
+                    color: color,
+                    size: size * 0.6,
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFloatingCircle(
+    BuildContext context,
+    double x,
+    double y,
+    Color color,
+    double size,
+  ) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(seconds: 5),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Positioned(
+          left: MediaQuery.of(context).size.width * x,
+          top: MediaQuery.of(context).size.height * y + (value * 25),
+          child: Transform.scale(
+            scale: 0.7 + (0.3 * value),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    color.withOpacity(0.2),
+                    color.withOpacity(0.05),
+                    Colors.transparent,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.2),
+                    blurRadius: size * 0.8,
+                    spreadRadius: size * 0.2,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFloatingSquare(
+    BuildContext context,
+    double x,
+    double y,
+    Color color,
+    double size,
+  ) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(seconds: 6),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Positioned(
+          left: MediaQuery.of(context).size.width * x,
+          top: MediaQuery.of(context).size.height * y + (value * 20),
+          child: Transform.rotate(
+            angle: value * math.pi,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: color.withOpacity(0.3), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.2),
+                    blurRadius: size * 0.5,
+                    spreadRadius: size * 0.1,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAdvancedGridPattern() {
+    return Positioned.fill(
+      child: CustomPaint(painter: AdvancedGridPatternPainter()),
+    );
+  }
+
+  Widget _buildMorphingShapes(BuildContext context) {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          // Morphing triangle to circle
+          _buildMorphingShape(
+            context,
+            0.2,
+            0.3,
+            const Color(0xFF00FFA3),
+            40,
+            0,
+          ),
+          // Morphing square to hexagon
+          _buildMorphingShape(
+            context,
+            0.8,
+            0.7,
+            const Color(0xFF00D4FF),
+            35,
+            1,
+          ),
+          // Morphing diamond to star
+          _buildMorphingShape(
+            context,
+            0.5,
+            0.1,
+            const Color(0xFF8A2BE2),
+            30,
+            2,
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildMorphingShape(
+    BuildContext context,
+    double x,
+    double y,
+    Color color,
+    double size,
+    int index,
+  ) {
+    return TweenAnimationBuilder<double>(
+      duration: Duration(seconds: 3 + index),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        final morphValue = (math.sin(value * 2 * math.pi) + 1) / 2;
+        return Positioned(
+          left: MediaQuery.of(context).size.width * x,
+          top: MediaQuery.of(context).size.height * y,
+          child: Transform.rotate(
+            angle: value * 2 * math.pi,
+            child: CustomPaint(
+              size: Size(size, size),
+              painter: MorphingShapePainter(
+                color: color,
+                morphValue: morphValue,
+                shapeType: index % 3,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAdvancedGeometricElements(BuildContext context) {
+    return Stack(
+      children: [
+        // Animated geometric shapes
+        _buildAnimatedGeometricShape(
+          context,
+          0.15,
+          0.1,
+          60,
+          const Color(0xFF00FFA3),
+          0,
+        ),
+        _buildAnimatedGeometricShape(
+          context,
+          0.85,
+          0.2,
+          45,
+          const Color(0xFF00D4FF),
+          1,
+        ),
+        _buildAnimatedGeometricShape(
+          context,
+          0.3,
+          0.9,
+          35,
+          const Color(0xFF8A2BE2),
+          2,
+        ),
+        _buildAnimatedGeometricShape(
+          context,
+          0.7,
+          0.8,
+          50,
+          const Color(0xFF00FFA3),
+          3,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedGeometricShape(
+    BuildContext context,
+    double x,
+    double y,
+    double size,
+    Color color,
+    int index,
+  ) {
+    return TweenAnimationBuilder<double>(
+      duration: Duration(seconds: 8 + (index * 2)),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Positioned(
+          left: MediaQuery.of(context).size.width * x,
+          top:
+              MediaQuery.of(context).size.height * y +
+              (value * 40 * math.sin(index.toDouble())),
+          child: Transform.rotate(
+            angle: value * 2 * math.pi,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(size * 0.2),
+                border: Border.all(color: color.withOpacity(0.2), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.1),
+                    blurRadius: size * 0.5,
+                    spreadRadius: size * 0.1,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -875,47 +1342,6 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  Widget _buildMorphingShape(
-    BuildContext context,
-    double topRatio,
-    double leftRatio,
-    double size,
-    Color color,
-  ) {
-    return AnimatedBuilder(
-      animation: _scrollController,
-      builder: (context, child) {
-        final scrollOffset = _scrollController.hasClients
-            ? _scrollController.offset
-            : 0.0;
-        final morphValue = (scrollOffset * 0.001) % 1.0;
-        final borderRadius =
-            size * (0.1 + 0.4 * (0.5 + 0.5 * (morphValue * 2 - 1).abs()));
-
-        return Positioned(
-          top: MediaQuery.of(context).size.height * topRatio,
-          left: MediaQuery.of(context).size.width * leftRatio,
-          child: Transform.rotate(
-            angle: scrollOffset * 0.0005,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(borderRadius),
-                gradient: LinearGradient(
-                  colors: [color.withOpacity(0.06), color.withOpacity(0.02)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                border: Border.all(color: color.withOpacity(0.08), width: 1),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildFeaturesSection() {
     return Column(
       children: [
@@ -981,116 +1407,75 @@ class _LandingPageState extends State<LandingPage>
     required String title,
     required String description,
   }) {
-    return AnimatedBuilder(
-      animation: _scrollController,
-      builder: (context, child) {
-        final scrollOffset = _scrollController.hasClients
-            ? _scrollController.offset
-            : 0.0;
-        final cardIndex =
-            0; // This would be passed as parameter in real implementation
-        final cardOffset = scrollOffset - (cardIndex * 200);
-        final isVisible = cardOffset > -100 && cardOffset < 1000;
-
-        if (!isVisible) return const SizedBox.shrink();
-
-        final progress = (cardOffset + 100) / 200;
-        final clampedProgress = progress.clamp(0.0, 1.0);
-
-        return Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..setEntry(3, 2, 0.001) // Perspective
-            ..rotateX(clampedProgress * 0.1) // 3D rotation
-            ..rotateY(clampedProgress * 0.05)
-            ..scale(0.8 + (clampedProgress * 0.2)), // Scale animation
-          child: Container(
-            padding: const EdgeInsets.all(24),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF00FFA3).withOpacity(0.1),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF00FFA3).withOpacity(0.1),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, 0),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08 + (clampedProgress * 0.04)),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: const Color(
-                  0xFF00FFA3,
-                ).withOpacity(0.1 + (clampedProgress * 0.1)),
-                width: 1,
-              ),
+              color: const Color(0xFF00FFA3).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(
-                    0.1 + (clampedProgress * 0.1),
-                  ),
-                  blurRadius: 10 + (clampedProgress * 10),
+                  color: const Color(0xFF00FFA3).withOpacity(0.2),
+                  blurRadius: 8,
                   spreadRadius: 0,
-                  offset: Offset(0, 4 + (clampedProgress * 4)),
-                ),
-                BoxShadow(
-                  color: const Color(
-                    0xFF00FFA3,
-                  ).withOpacity(clampedProgress * 0.1),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 0),
                 ),
               ],
             ),
-            child: Row(
+            child: Icon(icon, color: const Color(0xFF00FFA3), size: 28),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Transform.rotate(
-                  angle: clampedProgress * 0.1,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        0xFF00FFA3,
-                      ).withOpacity(0.1 + (clampedProgress * 0.1)),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(
-                            0xFF00FFA3,
-                          ).withOpacity(clampedProgress * 0.2),
-                          blurRadius: 8,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, color: const Color(0xFF00FFA3), size: 28),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 18 + (clampedProgress * 2),
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.white.withOpacity(
-                            0.7 + (clampedProgress * 0.1),
-                          ),
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.white.withOpacity(0.7),
+                    height: 1.4,
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -1362,41 +1747,12 @@ class _LandingPageState extends State<LandingPage>
     required String description,
     required IconData icon,
   }) {
-    return AnimatedBuilder(
-      animation: _scrollController,
-      builder: (context, child) {
-        final scrollOffset = _scrollController.hasClients
-            ? _scrollController.offset
-            : 0.0;
-        final stepIndex = int.parse(stepNumber) - 1;
-        final cardOffset = scrollOffset - (600 + stepIndex * 100);
-        final isVisible = cardOffset > -200 && cardOffset < 1000;
-
-        if (!isVisible) return const SizedBox.shrink();
-
-        final progress = (cardOffset + 200) / 300;
-        final clampedProgress = progress.clamp(0.0, 1.0);
-
-        // Elastic animation curve
-        final elasticProgress = _elasticOut(clampedProgress);
-
-        return Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..setEntry(3, 2, 0.0008) // Perspective
-            ..rotateX(elasticProgress * 0.15) // 3D rotation
-            ..rotateY(elasticProgress * 0.1)
-            ..scale(0.7 + (elasticProgress * 0.3)) // Scale with elastic effect
-            ..translate(0.0, (1 - elasticProgress) * 100), // Slide up
-          child: _buildHoverableStepCard(
-            stepNumber: stepNumber,
-            title: title,
-            description: description,
-            icon: icon,
-            elasticProgress: elasticProgress,
-          ),
-        );
-      },
+    return _buildHoverableStepCard(
+      stepNumber: stepNumber,
+      title: title,
+      description: description,
+      icon: icon,
+      elasticProgress: 1.0, // Always fully visible
     );
   }
 
@@ -1417,12 +1773,12 @@ class _LandingPageState extends State<LandingPage>
   }
 
   double _elasticOut(double t) {
-    const c4 = (2 * 3.14159) / 3;
+    const c4 = (2 * math.pi) / 3; // Using math.pi is more accurate
     return t == 0
         ? 0
         : t == 1
         ? 1
-        : pow(2, -10 * t) * sin((t * 10 - 0.75) * c4) + 1;
+        : math.pow(2, -10 * t) * math.sin((t * 10 - 0.75) * c4) + 1;
   }
 
   Widget _buildScrollProgressIndicator(BuildContext context) {
@@ -1467,54 +1823,42 @@ class _LandingPageState extends State<LandingPage>
   }
 
   Widget _buildParticleSystem(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _scrollController,
-      builder: (context, child) {
-        final scrollOffset = _scrollController.hasClients
-            ? _scrollController.offset
-            : 0.0;
-        final screenSize = MediaQuery.of(context).size;
+    final screenSize = MediaQuery.of(context).size;
 
-        return Stack(
-          children: List.generate(15, (index) {
-            final particleOffset = scrollOffset * (0.1 + (index % 3) * 0.1);
-            final x = (index * 37.0) % screenSize.width;
-            final y = (index * 23.0) % screenSize.height - particleOffset;
-            final size = 2.0 + (index % 3) * 1.0;
-            final opacity = 0.1 + (index % 4) * 0.05;
+    return Stack(
+      children: List.generate(15, (index) {
+        final x = (index * 37.0) % screenSize.width;
+        final y = (index * 23.0) % screenSize.height;
+        final size = 2.0 + (index % 3) * 1.0;
+        final opacity = 0.1 + (index % 4) * 0.05;
 
-            final colors = [
-              const Color(0xFF00FFA3),
-              const Color(0xFF00D4FF),
-              const Color(0xFF8A2BE2),
-            ];
-            final color = colors[index % colors.length];
+        final colors = [
+          const Color(0xFF00FFA3),
+          const Color(0xFF00D4FF),
+          const Color(0xFF8A2BE2),
+        ];
+        final color = colors[index % colors.length];
 
-            return Positioned(
-              left: x,
-              top: y,
-              child: Transform.rotate(
-                angle: scrollOffset * 0.0001 * (index + 1),
-                child: Container(
-                  width: size,
-                  height: size,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: color.withOpacity(opacity),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(opacity * 0.5),
-                        blurRadius: size * 2,
-                        spreadRadius: size * 0.5,
-                      ),
-                    ],
-                  ),
+        return Positioned(
+          left: x,
+          top: y,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withOpacity(opacity),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(opacity * 0.5),
+                  blurRadius: size * 2,
+                  spreadRadius: size * 0.5,
                 ),
-              ),
-            );
-          }),
+              ],
+            ),
+          ),
         );
-      },
+      }),
     );
   }
 
@@ -1527,61 +1871,192 @@ class _LandingPageState extends State<LandingPage>
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildFooterColumn('Product', ['Features', 'Pricing', 'Updates']),
-              _buildFooterColumn('Company', ['About Us', 'Careers', 'Contact']),
-              _buildFooterColumn('Support', [
-                'Help Center',
-                'Community',
-                'Status',
-              ]),
-              _buildFooterColumn('Legal', ['Privacy', 'Terms', 'Security']),
-            ],
-          ),
-          const SizedBox(height: 32),
-          const Divider(color: Color(0xFF00FFA3)),
-          const SizedBox(height: 16),
-          Text(
-            '© 2024 Finx. All rights reserved. | Learn to Invest, The Fun Way.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 14,
+          // Professional Developer Credit Section
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF00FFA3).withOpacity(0.1),
+                  const Color(0xFF00E676).withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF00FFA3).withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                // Animated Developer Badge
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(seconds: 2),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: 0.8 + (0.2 * value),
+                      child: Opacity(
+                        opacity: value,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00FFA3), Color(0xFF00E676)],
+                            ),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00FFA3).withOpacity(0.4),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.code, color: Colors.black, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Developed by Anand B',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                // GitHub Link with Hover Effect
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 1500),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.translate(
+                      offset: Offset(0, 20 * (1 - value)),
+                      child: Opacity(
+                        opacity: value,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () {
+                              // Add your GitHub URL here
+                              // You can use url_launcher package to open GitHub
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.link,
+                                    color: const Color(0xFF00FFA3),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'GitHub Profile',
+                                    style: TextStyle(
+                                      color: const Color(0xFF00FFA3),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                // Last Updated Section
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.update,
+                        color: const Color(0xFF00FFA3),
+                        size: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Last updated: ${_getLastUpdatedDate()}',
+                        style: TextStyle(
+                          color: const Color(0xFF00FFA3).withOpacity(0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Copyright with Professional Styling
+                Text(
+                  '© 2025 Finx. All rights reserved.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Learn to Invest, The Fun Way.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color(0xFF00FFA3).withOpacity(0.8),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFooterColumn(String title, List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Color(0xFF00FFA3),
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...items.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              item,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1888,6 +2363,56 @@ class _HoverableStepCardState extends State<_HoverableStepCard>
   }
 }
 
+class AdvancedGridPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.03)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    const double spacing = 40.0;
+
+    // Draw vertical lines
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    // Draw horizontal lines
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+
+    // Add enhanced dots at intersections
+    final dotPaint = Paint()
+      ..color = Colors.white.withOpacity(0.02)
+      ..style = PaintingStyle.fill;
+
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), 1.5, dotPaint);
+      }
+    }
+
+    // Add diagonal lines for extra depth
+    final diagonalPaint = Paint()
+      ..color = Colors.white.withOpacity(0.01)
+      ..strokeWidth = 0.3
+      ..style = PaintingStyle.stroke;
+
+    for (double x = 0; x < size.width; x += spacing * 2) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x + size.width, size.height),
+        diagonalPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
 class FullPageGridPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -1922,4 +2447,147 @@ class FullPageGridPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class MorphingShapePainter extends CustomPainter {
+  final Color color;
+  final double morphValue;
+  final int shapeType;
+
+  MorphingShapePainter({
+    required this.color,
+    required this.morphValue,
+    required this.shapeType,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withOpacity(0.3)
+      ..style = PaintingStyle.fill;
+
+    final strokePaint = Paint()
+      ..color = color.withOpacity(0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    switch (shapeType) {
+      case 0: // Triangle to Circle
+        _drawTriangleToCircle(canvas, center, radius, paint, strokePaint);
+        break;
+      case 1: // Square to Hexagon
+        _drawSquareToHexagon(canvas, center, radius, paint, strokePaint);
+        break;
+      case 2: // Diamond to Star
+        _drawDiamondToStar(canvas, center, radius, paint, strokePaint);
+        break;
+    }
+  }
+
+  void _drawTriangleToCircle(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint paint,
+    Paint strokePaint,
+  ) {
+    final path = Path();
+    final points = <Offset>[];
+
+    for (int i = 0; i < 3; i++) {
+      final angle = (i * 2 * math.pi / 3) - math.pi / 2;
+      final x = center.dx + radius * math.cos(angle) * (1 - morphValue * 0.3);
+      final y = center.dy + radius * math.sin(angle) * (1 - morphValue * 0.3);
+      points.add(Offset(x, y));
+    }
+
+    if (morphValue > 0.5) {
+      // Draw circle
+      canvas.drawCircle(center, radius * morphValue, paint);
+      canvas.drawCircle(center, radius * morphValue, strokePaint);
+    } else {
+      // Draw triangle
+      path.moveTo(points[0].dx, points[0].dy);
+      path.lineTo(points[1].dx, points[1].dy);
+      path.lineTo(points[2].dx, points[2].dy);
+      path.close();
+      canvas.drawPath(path, paint);
+      canvas.drawPath(path, strokePaint);
+    }
+  }
+
+  void _drawSquareToHexagon(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint paint,
+    Paint strokePaint,
+  ) {
+    final path = Path();
+    final sides = morphValue > 0.5 ? 6 : 4;
+
+    for (int i = 0; i < sides; i++) {
+      final angle = (i * 2 * math.pi / sides) - math.pi / 4;
+      final x = center.dx + radius * math.cos(angle);
+      final y = center.dy + radius * math.sin(angle);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+
+    canvas.drawPath(path, paint);
+    canvas.drawPath(path, strokePaint);
+  }
+
+  void _drawDiamondToStar(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint paint,
+    Paint strokePaint,
+  ) {
+    final path = Path();
+    final points = <Offset>[];
+    final spikes = morphValue > 0.5 ? 5 : 4;
+
+    for (int i = 0; i < spikes; i++) {
+      final angle = (i * 2 * math.pi / spikes) - math.pi / 2;
+      final outerRadius = radius;
+      final innerRadius = radius * 0.4 * morphValue;
+
+      // Outer point
+      final outerX = center.dx + outerRadius * math.cos(angle);
+      final outerY = center.dy + outerRadius * math.sin(angle);
+      points.add(Offset(outerX, outerY));
+
+      // Inner point (for star)
+      if (morphValue > 0.5) {
+        final innerAngle = angle + math.pi / spikes;
+        final innerX = center.dx + innerRadius * math.cos(innerAngle);
+        final innerY = center.dy + innerRadius * math.sin(innerAngle);
+        points.add(Offset(innerX, innerY));
+      }
+    }
+
+    if (points.isNotEmpty) {
+      path.moveTo(points[0].dx, points[0].dy);
+      for (int i = 1; i < points.length; i++) {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
+      path.close();
+
+      canvas.drawPath(path, paint);
+      canvas.drawPath(path, strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }

@@ -103,57 +103,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     _glowController.repeat(reverse: true);
   }
 
-  void _updateTopPerformers(EnhancedPortfolioProvider portfolio) {
-    final holdings = portfolio.holdings;
-    final stockData = portfolio.currentStockData;
-
-    final holdingsWithData = holdings.entries
-        .map((entry) {
-          final symbol = entry.key;
-          final quantity = entry.value;
-          final stock = stockData[symbol];
-
-          if (stock != null) {
-            return {
-              'symbol': symbol,
-              'quantity': quantity,
-              'currentPrice': stock.currentPrice,
-              'change': stock.change,
-              'changePercent': stock.changePercent,
-              'price': stock.currentPrice,
-              'value': quantity * stock.currentPrice,
-              'data': _generatePriceData(
-                stock.currentPrice,
-                stock.changePercent > 0,
-              ),
-            };
-          }
-          return null;
-        })
-        .where((item) => item != null)
-        .cast<Map<String, dynamic>>()
-        .toList();
-
-    holdingsWithData.sort(
-      (a, b) => (b['changePercent'] as double).compareTo(
-        a['changePercent'] as double,
-      ),
-    );
-
-    if (mounted) {
-      setState(() {
-        _topGainers = holdingsWithData
-            .where((item) => (item['changePercent'] as double) > 0)
-            .take(3)
-            .toList();
-        _topLosers = holdingsWithData
-            .where((item) => (item['changePercent'] as double) < 0)
-            .take(3)
-            .toList();
-      });
-    }
-  }
-
   List<double> _generatePriceData(double basePrice, bool isGain) {
     final random = math.Random();
     final data = <double>[];
@@ -835,6 +784,59 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         ],
       ),
     );
+  }
+
+  void _updateTopPerformers(EnhancedPortfolioProvider portfolio) {
+    // Generate mock top performers data
+    setState(() {
+      _topGainers = [
+        {
+          'symbol': 'AAPL',
+          'name': 'Apple Inc.',
+          'price': 175.43,
+          'change': 2.34,
+          'data': [170.0, 172.0, 171.5, 173.0, 175.43],
+        },
+        {
+          'symbol': 'GOOGL',
+          'name': 'Alphabet Inc.',
+          'price': 142.67,
+          'change': 1.89,
+          'data': [140.0, 141.0, 140.5, 142.0, 142.67],
+        },
+        {
+          'symbol': 'MSFT',
+          'name': 'Microsoft Corp.',
+          'price': 378.85,
+          'change': 1.56,
+          'data': [370.0, 372.0, 371.5, 375.0, 378.85],
+        },
+      ];
+
+      _topLosers = [
+        {
+          'symbol': 'TSLA',
+          'name': 'Tesla Inc.',
+          'price': 245.12,
+          'change': -3.45,
+          'data': [250.0, 248.0, 246.0, 244.0, 245.12],
+        },
+        {
+          'symbol': 'AMZN',
+          'name': 'Amazon.com Inc.',
+          'price': 155.89,
+          'change': -2.12,
+          'data': [158.0, 157.0, 156.5, 155.0, 155.89],
+        },
+        {
+          'symbol': 'META',
+          'name': 'Meta Platforms Inc.',
+          'price': 489.34,
+          'change': -1.78,
+          'data': [495.0, 492.0, 490.0, 488.0, 489.34],
+        },
+      ];
+    });
   }
 }
 

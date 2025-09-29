@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/enhanced_portfolio_provider.dart';
+import '../theme/liquid_material_theme.dart';
+import '../widgets/liquid_card.dart';
+import '../utils/liquid_text_style.dart';
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({super.key});
@@ -61,12 +64,13 @@ class _PortfolioScreenState extends State<PortfolioScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: LiquidMaterialTheme.darkSpaceBackground(context),
       body: Consumer<EnhancedPortfolioProvider>(
         builder: (context, portfolio, child) {
           return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildAppBar(),
+              _buildLiquidAppBar(),
               _buildPortfolioOverview(portfolio),
               _buildPerformanceChart(portfolio),
               _buildHoldingsList(portfolio),
@@ -79,7 +83,7 @@ class _PortfolioScreenState extends State<PortfolioScreen>
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildLiquidAppBar() {
     return SliverAppBar(
       expandedHeight: 120,
       floating: false,
@@ -101,16 +105,12 @@ class _PortfolioScreenState extends State<PortfolioScreen>
                 const SizedBox(height: 40),
                 Text(
                   'My Portfolio',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: LiquidTextStyle.headlineMedium(context),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Track your investments',
-                  style: GoogleFonts.inter(fontSize: 14, color: Colors.white70),
+                  style: LiquidTextStyle.bodyMedium(context),
                 ),
               ],
             ),

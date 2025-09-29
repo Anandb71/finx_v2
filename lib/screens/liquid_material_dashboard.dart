@@ -628,11 +628,24 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
             Text(title, style: LiquidTextStyle.headlineMedium(context)),
             if (withRefresh)
               IconButton(
-                icon: Icon(
-                  Icons.refresh_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                onPressed: () => setState(() {}),
+                icon: _isRefreshingMarketMovers
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.refresh_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                onPressed: _isRefreshingMarketMovers
+                    ? null
+                    : _refreshMarketMovers,
               ),
           ],
         ),
@@ -709,11 +722,42 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
                           style: LiquidTextStyle.titleMedium(context),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'Ready to invest in the future?',
-                          style: LiquidTextStyle.bodyLarge(
-                            context,
-                          ).copyWith(fontSize: 14),
+                        Flexible(
+                          child: Text(
+                            'Ready to invest in the future?',
+                            style: LiquidTextStyle.bodyLarge(
+                              context,
+                            ).copyWith(fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.update,
+                              size: 12,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.7),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'Last updated: ${_formatLastUpdated()}',
+                                style: LiquidTextStyle.bodyMedium(context)
+                                    .copyWith(
+                                      fontSize: 11,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withOpacity(0.7),
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -926,15 +970,20 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
               icon: Icons.trending_up,
               title: 'Trade',
               subtitle: _getTradeSubtitle(portfolio),
-              onTap: () => _navigateWithFluidTransition(
-                TradeScreen(
-                  stockData: {
-                    'symbol': 'AAPL',
-                    'name': 'Apple Inc.',
-                    'price': portfolio.getCurrentPrice('AAPL'),
-                  },
-                ),
-              ),
+              onTap: () async {
+                // Get real-time stock data for AAPL
+                final stockData = await portfolio.fetchStockData('AAPL');
+                _navigateWithFluidTransition(
+                  TradeScreen(
+                    stockData: {
+                      'symbol': 'AAPL',
+                      'name': 'Apple Inc.',
+                      'price': stockData?.currentPrice ?? 150.25,
+                      'currentPrice': stockData?.currentPrice ?? 150.25,
+                    },
+                  ),
+                );
+              },
             ),
           ),
           Consumer<EnhancedPortfolioProvider>(
@@ -1818,16 +1867,39 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
   }
 
   // --- Data Fetching Methods ---
+
+  /// Get real-time stock data from the service
+  Future<StockData?> _getRealTimeStockData(String symbol) async {
+    try {
+      final portfolio = context.read<EnhancedPortfolioProvider>();
+      // Use the public method to get stock data
+      return portfolio.getStockData(symbol);
+    } catch (e) {
+      print('Error getting real-time data for $symbol: $e');
+      return null;
+    }
+  }
+
   String _getTradeSubtitle(EnhancedPortfolioProvider portfolio) {
-    if (portfolio.currentStockData.isEmpty) return 'Market is closed';
-    final topMover = portfolio.currentStockData.values.reduce(
-      (a, b) => a.changePercent > b.changePercent ? a : b,
-    );
-    return 'Top mover: ${topMover.symbol} ${topMover.changePercent >= 0 ? '+' : ''}${topMover.changePercent.toStringAsFixed(1)}%';
+    final totalValue = portfolio.totalValue;
+    if (totalValue > 100000) {
+      return 'Advanced Trading';
+    } else if (totalValue > 50000) {
+      return 'Intermediate Trading';
+    } else {
+      return 'Beginner Trading';
+    }
   }
 
   String _getAnalyticsSubtitle(EnhancedPortfolioProvider portfolio) {
-    return 'Deep dive into your portfolio';
+    final holdingsCount = portfolio.holdings.length;
+    if (holdingsCount > 10) {
+      return 'Complex Portfolio Analysis';
+    } else if (holdingsCount > 5) {
+      return 'Multi-Asset Analysis';
+    } else {
+      return 'Basic Analytics';
+    }
   }
 
   String _getLearnSubtitle() {
@@ -1854,7 +1926,102 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
     return data;
   }
 
+  // Market movers data cache
+  List<Map<String, dynamic>> _marketMoversCache = [];
+  DateTime? _lastMarketMoversUpdate;
+  bool _isRefreshingMarketMovers = false;
+  DateTime _lastAppUpdate = DateTime.now();
+
   List<Map<String, dynamic>> _getMarketMovers() {
+    // Update every 20 seconds instead of every render
+    final now = DateTime.now();
+    if (_lastMarketMoversUpdate == null ||
+        now.difference(_lastMarketMoversUpdate!).inSeconds > 20) {
+      _updateMarketMoversData();
+      _lastMarketMoversUpdate = now;
+    }
+
+    return _marketMoversCache.isNotEmpty
+        ? _marketMoversCache
+        : _getDefaultMarketMovers();
+  }
+
+  Future<void> _updateMarketMoversData() async {
+    // Fetch real-time data for market movers
+    final symbols = ['AAPL', 'TSLA', 'NVDA', 'MSFT'];
+    final portfolio = context.read<EnhancedPortfolioProvider>();
+
+    final List<Map<String, dynamic>> realTimeData = [];
+
+    for (final symbol in symbols) {
+      final stockData = await portfolio.fetchStockData(symbol);
+      if (stockData != null) {
+        realTimeData.add({
+          'symbol': symbol,
+          'name': stockData.name,
+          'price': stockData.currentPrice,
+          'change': stockData.change,
+          'changePercent': stockData.changePercent,
+          'currentPrice': stockData.currentPrice,
+        });
+      }
+    }
+
+    if (realTimeData.isNotEmpty) {
+      _marketMoversCache = realTimeData;
+      if (mounted) setState(() {});
+    } else {
+      // Fallback to default data
+      _marketMoversCache = _getDefaultMarketMovers();
+    }
+  }
+
+  /// Format last updated timestamp
+  String _formatLastUpdated() {
+    final now = DateTime.now();
+    final difference = now.difference(_lastAppUpdate);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
+  }
+
+  /// Refresh market movers data manually
+  void _refreshMarketMovers() async {
+    if (_isRefreshingMarketMovers) return;
+
+    setState(() {
+      _isRefreshingMarketMovers = true;
+    });
+
+    try {
+      // Force refresh by clearing cache and fetching new data
+      _marketMoversCache.clear();
+      _lastMarketMoversUpdate = null;
+
+      // Fetch fresh data
+      await _updateMarketMoversData();
+
+      // Update timestamp to prevent auto-refresh for a while
+      _lastMarketMoversUpdate = DateTime.now();
+    } catch (e) {
+      print('Error refreshing market movers: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshingMarketMovers = false;
+        });
+      }
+    }
+  }
+
+  List<Map<String, dynamic>> _getDefaultMarketMovers() {
     final now = DateTime.now();
     final random = (now.millisecondsSinceEpoch % 1000) / 1000.0;
     return [

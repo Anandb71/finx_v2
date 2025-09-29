@@ -201,11 +201,12 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     }
   }
 
-  /// Get average cost for a stock
+  /// Get average cost for a stock (FIFO method)
   double _getAverageCost(String symbol) {
     final stockTransactions = _transactions
-        .where((t) => t.symbol == symbol && t.type == TransactionType.buy)
-        .toList();
+        .where((t) => t.symbol == symbol)
+        .toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     if (stockTransactions.isEmpty) return 0.0;
 
@@ -213,8 +214,17 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     int totalQuantity = 0;
 
     for (final transaction in stockTransactions) {
-      totalCost += transaction.quantity * transaction.price;
-      totalQuantity += transaction.quantity;
+      if (transaction.type == TransactionType.buy) {
+        totalCost += transaction.quantity * transaction.price;
+        totalQuantity += transaction.quantity;
+      } else {
+        // For sells, reduce quantity proportionally
+        if (totalQuantity > 0) {
+          final sellRatio = transaction.quantity / totalQuantity;
+          totalCost *= (1 - sellRatio);
+          totalQuantity -= transaction.quantity;
+        }
+      }
     }
 
     return totalQuantity > 0 ? totalCost / totalQuantity : 0.0;
@@ -321,6 +331,25 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     return _currentStockData[symbol];
   }
 
+  /// Fetch stock data if not cached
+  Future<StockData?> fetchStockData(String symbol) async {
+    if (_currentStockData.containsKey(symbol)) {
+      return _currentStockData[symbol];
+    }
+    
+    try {
+      final data = await _dataService.getStockData(symbol);
+      if (data != null) {
+        _currentStockData[symbol] = data;
+        notifyListeners();
+      }
+      return data;
+    } catch (e) {
+      print('Error fetching stock data for $symbol: $e');
+      return null;
+    }
+  }
+
   /// Get portfolio performance metrics
   Map<String, double> getPerformanceMetrics() {
     return {
@@ -416,39 +445,99 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     return sectorMap[symbol] ?? 'Other';
   }
 
-  /// Get average purchase price for a stock
-  double getAveragePurchasePrice(String symbol) {
-    final symbolTransactions = _transactions
-        .where((t) => t.symbol == symbol)
-        .toList();
+  /// Buy stock shares
+  Future<bool> buyStock(String symbol, int quantity, double price) async {
+    try {
+      final totalCost = quantity * price;
 
-    if (symbolTransactions.isEmpty) return 0.0;
-
-    double totalCost = 0.0;
-    int totalQuantity = 0;
-
-    for (final transaction in symbolTransactions) {
-      if (transaction.type == TransactionType.buy) {
-        totalCost += transaction.totalValue;
-        totalQuantity += transaction.quantity;
-      } else if (transaction.type == TransactionType.sell) {
-        // For sells, we need to calculate the average cost of remaining shares
-        // This is a simplified FIFO approach
-        totalQuantity -= transaction.quantity;
-        if (totalQuantity <= 0) {
-          totalCost = 0.0;
-          totalQuantity = 0;
-        } else {
-          // Adjust cost proportionally
-          totalCost =
-              totalCost *
-              (totalQuantity / (totalQuantity + transaction.quantity));
-        }
+      // Check if user has enough cash
+      if (_virtualCash < totalCost) {
+        return false; // Insufficient funds
       }
-    }
 
-    return totalQuantity > 0 ? totalCost / totalQuantity : 0.0;
+      // Create transaction
+      final transaction = Transaction(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        symbol: symbol,
+        quantity: quantity,
+        price: price,
+        type: TransactionType.buy,
+        timestamp: DateTime.now(),
+        totalValue: totalCost,
+      );
+
+      // Execute transaction
+      _virtualCash -= totalCost;
+      _holdings[symbol] = (_holdings[symbol] ?? 0) + quantity;
+      _transactions.add(transaction);
+
+      // Update portfolio value
+      _updatePortfolioValue();
+      notifyListeners();
+
+      return true;
+    } catch (e) {
+      print('Error buying stock: $e');
+      return false;
+    }
   }
+
+  /// Sell stock shares
+  Future<bool> sellStock(String symbol, int quantity, double price) async {
+    try {
+      // Check if user has enough shares
+      final currentShares = _holdings[symbol] ?? 0;
+      if (currentShares < quantity) {
+        return false; // Insufficient shares
+      }
+
+      final totalValue = quantity * price;
+
+      // Create transaction
+      final transaction = Transaction(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        symbol: symbol,
+        quantity: quantity,
+        price: price,
+        type: TransactionType.sell,
+        timestamp: DateTime.now(),
+        totalValue: totalValue,
+      );
+
+      // Execute transaction
+      _virtualCash += totalValue;
+      _holdings[symbol] = currentShares - quantity;
+      if (_holdings[symbol] == 0) {
+        _holdings.remove(symbol);
+      }
+      _transactions.add(transaction);
+
+      // Update portfolio value
+      _updatePortfolioValue();
+      notifyListeners();
+
+      return true;
+    } catch (e) {
+      print('Error selling stock: $e');
+      return false;
+    }
+  }
+
+  /// Get current shares held for a symbol
+  int getShares(String symbol) {
+    return _holdings[symbol] ?? 0;
+  }
+
+  /// Check if user can afford to buy
+  bool canAfford(int quantity, double price) {
+    return _virtualCash >= (quantity * price);
+  }
+
+  /// Get average purchase price for a stock (for display purposes)
+  double getAveragePurchasePrice(String symbol) {
+    return _getAverageCost(symbol);
+  }
+
 
   /// Clean up resources
   @override
