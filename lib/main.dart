@@ -19,6 +19,10 @@ import 'services/news_service.dart';
 import 'widgets/app_with_floating_ai.dart';
 import 'services/global_mascot_manager.dart';
 import 'theme/liquid_material_theme.dart';
+import 'theme/finx_colors.dart';
+import 'theme/finx_typography.dart';
+import 'widgets/finx_button.dart';
+import 'widgets/finx_card.dart';
 
 // To make GoogleFonts work, add this to your pubspec.yaml file:
 // dependencies:
@@ -279,18 +283,18 @@ class _LandingPageState extends State<LandingPage>
     final isWeb = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
+      backgroundColor: FinxColors.nightVoid,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF000000),
-              Color(0xFF0A0A0A),
-              Color(0xFF000000),
-              Color(0xFF000000),
+              FinxColors.nightVoid,
+              FinxColors.nightVoid.withOpacity(0.95),
+              FinxColors.nightVoid,
             ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+            stops: const [0.0, 0.5, 1.0],
           ),
         ),
         child: Stack(
@@ -410,19 +414,15 @@ class _LandingPageState extends State<LandingPage>
           // Logo
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.auto_graph_rounded,
-                color: Color(0xFF00FFA3),
+                color: FinxColors.auroraGreen,
                 size: 32,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: FinxSpacing.xs),
               Text(
                 'Finx',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                style: FinxTypography.h4(color: FinxColors.ghostWhite),
               ),
             ],
           ),
@@ -435,8 +435,9 @@ class _LandingPageState extends State<LandingPage>
                 _buildNavItem('About'),
                 const SizedBox(width: 32),
                 _buildNavItem('Contact'),
-                const SizedBox(width: 32),
-                ElevatedButton(
+                SizedBox(width: FinxSpacing.lg),
+                FinxButton(
+                  text: 'Sign In',
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -445,42 +446,21 @@ class _LandingPageState extends State<LandingPage>
                       ),
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00FFA3),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                  child: const Text('Sign In'),
+                  type: FinxButtonType.primary,
                 ),
               ],
             )
           else
             // Mobile login button
-            ElevatedButton(
+            FinxButton(
+              text: 'Sign In',
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00FFA3),
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: const Text('Sign In'),
+              type: FinxButtonType.primary,
             ),
         ],
       ),
