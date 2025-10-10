@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:intl/intl.dart';
 import 'firebase_options.dart';
 import 'auth/auth_gate.dart';
 import 'screens/signup_screen.dart';
@@ -20,7 +19,6 @@ import 'services/news_service.dart';
 import 'widgets/app_with_floating_ai.dart';
 import 'services/global_mascot_manager.dart';
 import 'theme/liquid_material_theme.dart';
-import 'widgets/fluid_cursor_background.dart';
 
 // To make GoogleFonts work, add this to your pubspec.yaml file:
 // dependencies:
@@ -281,7 +279,20 @@ class _LandingPageState extends State<LandingPage>
     final isWeb = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
-      body: FluidCursorBackground(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF000000),
+              Color(0xFF0A0A0A),
+              Color(0xFF000000),
+              Color(0xFF000000),
+            ],
+            stops: [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
         child: Stack(
           children: [
             // Full-page background pattern
@@ -1234,8 +1245,15 @@ class _LandingPageState extends State<LandingPage>
         _buildRotatingOrb(context, 0.5, 0.05, 35, const Color(0xFF8A2BE2)),
 
         // Morphing geometric shapes
-        _buildMorphingShape(context, 0.35, 0.7, 40, const Color(0xFF00FFA3)),
-        _buildMorphingShape(context, 0.65, 0.25, 30, const Color(0xFF00D4FF)),
+        _buildMorphingShape(context, 0.35, 0.7, const Color(0xFF00FFA3), 40, 0),
+        _buildMorphingShape(
+          context,
+          0.65,
+          0.25,
+          const Color(0xFF00D4FF),
+          30,
+          1,
+        ),
       ],
     );
   }

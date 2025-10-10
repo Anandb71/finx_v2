@@ -29,10 +29,34 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>finx_v2</title>
+  <title>Finx - Gamified Stock Trading</title>
   <link rel="manifest" href="manifest.json">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    #fluid-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    flutter-view, flt-glass-pane {
+      position: relative;
+      z-index: 2;
+    }
+  </style>
 </head>
 <body>
+  <!-- WebGL Fluid Simulation -->
+  <script src="https://cdn.jsdelivr.net/gh/PavelDoGreat/WebGL-Fluid-Simulation@master/script.js"></script>
+  
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
