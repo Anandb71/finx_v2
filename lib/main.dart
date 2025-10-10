@@ -426,7 +426,7 @@ class _LandingPageState extends State<LandingPage>
               ),
             ],
           ),
-          // Navigation (Web only)
+          // Navigation
           if (isWeb)
             Row(
               children: [
@@ -459,6 +459,30 @@ class _LandingPageState extends State<LandingPage>
                   child: const Text('Sign In'),
                 ),
               ],
+            )
+          else
+            // Mobile login button
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00FFA3),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: const Text('Sign In'),
             ),
         ],
       ),
