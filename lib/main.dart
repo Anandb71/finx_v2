@@ -20,6 +20,7 @@ import 'services/news_service.dart';
 import 'widgets/app_with_floating_ai.dart';
 import 'services/global_mascot_manager.dart';
 import 'theme/liquid_material_theme.dart';
+import 'widgets/fluid_cursor_background.dart';
 
 // To make GoogleFonts work, add this to your pubspec.yaml file:
 // dependencies:
@@ -43,12 +44,12 @@ void main() async {
   runApp(const MyApp());
 }
 
-// TODO: APIs need to be fixed on site - Finnhub and Gemini API configurations need verification
+// TODO: APIs need to be fixed on site
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // Global key for navigation
+  // Navigation key
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
@@ -56,11 +57,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Enhanced portfolio provider with real-time data
+        // Portfolio provider
         ChangeNotifierProvider(
           create: (context) {
             final provider = EnhancedPortfolioProvider();
-            // Initialize real-time data loading
             provider.initializeRealTimeData();
             return provider;
           },
@@ -281,20 +281,7 @@ class _LandingPageState extends State<LandingPage>
     final isWeb = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF000000), // Super dark black
-              Color(0xFF0A0A0A), // Very dark gray
-              Color(0xFF000000), // Super dark black
-              Color(0xFF000000), // Super dark black
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
-          ),
-        ),
+      body: FluidCursorBackground(
         child: Stack(
           children: [
             // Full-page background pattern

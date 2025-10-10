@@ -20,7 +20,7 @@ class AchievementService extends ChangeNotifier {
     _allAchievements.addAll([
       Achievement(
         id: 'first_trade',
-        title: 'First Steps',
+        title: 'First Trade',
         description: 'Complete your first trade',
         icon: '🎯',
         points: 10,
@@ -28,7 +28,7 @@ class AchievementService extends ChangeNotifier {
       ),
       Achievement(
         id: 'portfolio_master',
-        title: 'Portfolio Master',
+        title: 'Big Portfolio',
         description: 'Reach \$100,000 portfolio value',
         icon: '💎',
         points: 50,
@@ -36,7 +36,7 @@ class AchievementService extends ChangeNotifier {
       ),
       Achievement(
         id: 'diversified_investor',
-        title: 'Diversified Investor',
+        title: 'Diversified',
         description: 'Hold 5 different stocks',
         icon: '🌐',
         points: 25,

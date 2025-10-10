@@ -31,8 +31,9 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
   double _dayGainPercent = 0.0;
   final List<double> _portfolioValueHistory = [100000.0];
 
-  // Getters
+  // Getter methods
   double get virtualCash => _virtualCash;
+  // Current holdings
   Map<String, int> get holdings => Map.unmodifiable(_holdings);
   List<Transaction> get transactions => List.unmodifiable(_transactions);
   List<Transaction> get transactionHistory => List.unmodifiable(_transactions);
@@ -65,7 +66,7 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     return (totalValue / 5000).floor() + 1;
   }
 
-  /// Initialize real-time data updates
+  // Start loading real-time data
   void initializeRealTimeData() {
     // Start periodic updates
     _updateTimer = Timer.periodic(
@@ -159,7 +160,7 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     }
   }
 
-  /// Update portfolio value calculations
+  // Calculate portfolio value
   void _updatePortfolioValue() {
     double newTotalValue = _virtualCash;
     double newTotalGain = 0.0;
@@ -201,12 +202,11 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     }
   }
 
-  /// Get average cost for a stock (FIFO method)
+  // Calculate average cost
   double _getAverageCost(String symbol) {
-    final stockTransactions = _transactions
-        .where((t) => t.symbol == symbol)
-        .toList()
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final stockTransactions =
+        _transactions.where((t) => t.symbol == symbol).toList()
+          ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     if (stockTransactions.isEmpty) return 0.0;
 
@@ -321,22 +321,20 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     }
   }
 
-  /// Get current price for a stock
   double getCurrentPrice(String symbol) {
     return _currentStockData[symbol]?.currentPrice ?? 0.0;
   }
 
-  /// Get stock data for a symbol
   StockData? getStockData(String symbol) {
     return _currentStockData[symbol];
   }
 
-  /// Fetch stock data if not cached
+  // Get stock data if not cached
   Future<StockData?> fetchStockData(String symbol) async {
     if (_currentStockData.containsKey(symbol)) {
       return _currentStockData[symbol];
     }
-    
+
     try {
       final data = await _dataService.getStockData(symbol);
       if (data != null) {
@@ -445,7 +443,7 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     return sectorMap[symbol] ?? 'Other';
   }
 
-  /// Buy stock shares
+  // Buy stock
   Future<bool> buyStock(String symbol, int quantity, double price) async {
     try {
       final totalCost = quantity * price;
@@ -482,7 +480,7 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     }
   }
 
-  /// Sell stock shares
+  // Sell stock
   Future<bool> sellStock(String symbol, int quantity, double price) async {
     try {
       // Check if user has enough shares
@@ -537,7 +535,6 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
   double getAveragePurchasePrice(String symbol) {
     return _getAverageCost(symbol);
   }
-
 
   /// Clean up resources
   @override

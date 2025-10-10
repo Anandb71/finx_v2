@@ -4,9 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class NewsService {
-  static final NewsService _instance = NewsService._internal();
-  factory NewsService() => _instance;
-  NewsService._internal();
+  static final NewsService _singleton = NewsService._create();
+  factory NewsService() => _singleton;
+  NewsService._create();
 
   // Configuration
   static String get _newsApiKey => dotenv.env['NEWS_API_KEY'] ?? '';
@@ -17,7 +17,7 @@ class NewsService {
   final Map<String, DateTime> _lastFetchTimes = {};
   static const Duration _minFetchInterval = Duration(minutes: 5);
 
-  /// Get financial news with caching and rate limiting
+  // Get financial news with some caching
   Future<List<NewsArticle>> getFinancialNews({int pageSize = 10}) async {
     final cacheKey = 'financial_news_$pageSize';
 
@@ -48,7 +48,7 @@ class NewsService {
     }
   }
 
-  /// Get market news for specific symbols
+  // Get market news for specific stocks
   Future<List<NewsArticle>> getMarketNews(
     List<String> symbols, {
     int pageSize = 5,

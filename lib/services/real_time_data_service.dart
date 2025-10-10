@@ -226,7 +226,7 @@ class RealTimeDataService {
     }
   }
 
-  /// Fetch stock data from Finnhub API
+  // Get stock data from API
   Future<StockData?> _fetchStockData(String symbol) async {
     try {
       final url = '$_finnhubBaseUrl/quote?symbol=$symbol&token=$_finnhubApiKey';

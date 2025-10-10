@@ -5,12 +5,14 @@ class GeminiAIService {
   static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
   static GenerativeModel? _model;
 
-  // Initialize the Gemini model
+  // Set up the AI model
   static void initialize() {
-    print('🔧 Initializing Gemini AI Service...');
-    print('🔑 API Key loaded: ${_apiKey.isNotEmpty ? "✅ Yes" : "❌ No"}');
-    print('🔑 API Key length: ${_apiKey.length}');
-    print('🔑 API Key preview: ${_apiKey.substring(0, 10)}...');
+    print('Setting up Gemini AI...');
+    print('API Key loaded: ${_apiKey.isNotEmpty ? "Yes" : "No"}');
+    print('Key length: ${_apiKey.length}');
+    if (_apiKey.isNotEmpty) {
+      print('Key preview: ${_apiKey.substring(0, 10)}...');
+    }
 
     _model = GenerativeModel(
       model: 'gemini-pro',
@@ -30,18 +32,18 @@ class GeminiAIService {
     );
   }
 
-  // Get AI response for financial/investment questions
+  // Get AI response for financial questions
   static Future<String> getFinancialAdvice(String userMessage) async {
-    print('🤖 Getting financial advice...');
-    print('📝 User message: $userMessage');
+    print('Getting financial advice...');
+    print('User message: $userMessage');
 
     if (_model == null) {
-      print('🔄 Model not initialized, initializing now...');
+      print('Model not ready, setting up now...');
       initialize();
     }
 
     try {
-      print('🚀 Sending request to Gemini API...');
+      print('Sending request to Gemini...');
 
       final prompt =
           '''

@@ -21,8 +21,8 @@ class QuestService extends ChangeNotifier {
     _allQuests.addAll([
       Quest(
         id: 'first_trade_quest',
-        title: 'Make Your First Trade',
-        description: 'Buy or sell your first stock to get started',
+        title: 'First Trade',
+        description: 'Buy or sell your first stock',
         icon: '🎯',
         points: 20,
         category: 'Trading',
@@ -33,8 +33,8 @@ class QuestService extends ChangeNotifier {
       ),
       Quest(
         id: 'diversify_portfolio',
-        title: 'Diversify Your Portfolio',
-        description: 'Hold at least 3 different stocks',
+        title: 'Portfolio Diversity',
+        description: 'Hold 3+ different stocks',
         icon: '🌐',
         points: 30,
         category: 'Strategy',
@@ -230,7 +230,7 @@ class QuestService extends ChangeNotifier {
       print('Error completing quest in Firebase: $e');
     }
 
-    print('🎉 Quest completed: ${quest.title}');
+    print('Quest completed: ${quest.title}');
   }
 
   Future<void> loadUserQuests(String userId) async {

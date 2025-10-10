@@ -72,6 +72,7 @@ class _TradeScreenState extends State<TradeScreen>
     });
   }
 
+  // Calculate cost as user types
   void _updateEstimatedCost() {
     final quantityText = _quantityController.text.trim();
     final quantity = int.tryParse(quantityText) ?? 0;

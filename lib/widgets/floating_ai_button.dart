@@ -27,7 +27,7 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
   }
 
   void _setupAnimations() {
-    // Subtle pulse animation for the glow effect
+    // Pulse effect
     _pulseController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
@@ -36,7 +36,7 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Bounce animation for tap feedback
+    // Tap feedback
     _bounceController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -45,7 +45,7 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
       CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
     );
 
-    // Tooltip animation
+    // Tooltip fade
     _tooltipController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -54,7 +54,6 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
       CurvedAnimation(parent: _tooltipController, curve: Curves.easeOut),
     );
 
-    // Start the subtle pulse animation
     _pulseController.repeat(reverse: true);
   }
 
@@ -79,7 +78,7 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
       // Controller might be disposed, ignore
     }
 
-    // Use the global navigator key to ensure proper navigation
+    // Navigate to AI chat
     GlobalMascotManager.navigatorKey.currentState?.push(
       MaterialPageRoute(builder: (context) => const AIMentorScreen()),
     );
@@ -144,7 +143,7 @@ class _FloatingAIButtonState extends State<FloatingAIButton>
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'AI Chat Bot',
+                                'AI Chat',
                                 style: GoogleFonts.inter(
                                   color: Colors.white,
                                   fontSize: 14,

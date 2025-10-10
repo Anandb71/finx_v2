@@ -30,7 +30,7 @@ import 'achievements_screen.dart';
 import 'portfolio_screen.dart';
 import 'ai_mentor_screen.dart';
 
-// IMPROVEMENT: Typography now pulls colors from the theme for Material You compatibility.
+// Typography styles that work with Material You
 class LiquidTextStyle {
   static TextStyle headlineLarge(BuildContext context) => GoogleFonts.manrope(
     fontSize: 48,
@@ -149,7 +149,7 @@ class ParticlePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-/// 🌊 LIQUID MATERIAL DASHBOARD
+// Main dashboard screen
 class LiquidMaterialDashboard extends StatefulWidget {
   const LiquidMaterialDashboard({super.key});
 
@@ -160,10 +160,10 @@ class LiquidMaterialDashboard extends StatefulWidget {
 
 class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
     with TickerProviderStateMixin {
-  // --- Layout Constants ---
+  // Layout stuff
   static const _horizontalPadding = EdgeInsets.symmetric(horizontal: 24.0);
 
-  // --- Animation Controllers ---
+  // Animation controllers
   late final AnimationController _fadeController;
   late final AnimationController _auroraController;
   late final AnimationController _glowController;
@@ -172,12 +172,12 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
   late final AnimationController _loadingController;
   late final AnimationController _blurController;
 
-  // IMPROVEMENT: Physics-based tilt now uses its own dedicated controller.
+  // Physics animations
   late final AnimationController _tiltController;
   late final AnimationController _magneticController;
   late final AnimationController _rippleController;
 
-  // --- Animations ---
+  // Animations
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _glowAnimation;
   late Animation<double> _pillAnimation;
@@ -186,24 +186,24 @@ class _LiquidMaterialDashboardState extends State<LiquidMaterialDashboard>
   late final Animation<double> _magneticAnimation;
   late final Animation<double> _rippleAnimation;
 
-  // --- Physics and Interaction State ---
-  // IMPROVEMENT: State for physics simulation.
+  // Physics and interaction state
+  // Physics simulation state
   SpringSimulation? _xSpring, _ySpring;
   Offset _tilt = Offset.zero;
 
-  // IMPROVEMENT: Use a ValueNotifier for scroll delta to prevent rebuilding the whole screen.
+  // Scroll tracking
   final ValueNotifier<double> _scrollDeltaNotifier = ValueNotifier(0.0);
 
-  // --- Loading Narrative State ---
+  // Loading state
   bool _isLoading = true;
   bool _showSyncingText = false;
 
-  // --- Gamification State (for quests) ---
+  // Quest progress
   int _questProgress = 1;
   final int _questGoal = 3;
   bool _isQuestComplete = false;
 
-  // --- User Profile State ---
+  // User profile
   String get _userEmail {
     final user = FirebaseAuth.instance.currentUser;
     return user?.email ?? 'user@example.com';

@@ -27,7 +27,7 @@ class _AIMentorScreenState extends State<AIMentorScreen>
   late AnimationController _auroraController;
   late Animation<double> _typingAnimation;
 
-  // Initialize Gemini AI service
+  // AI setup
   bool _isInitialized = false;
 
   @override
@@ -35,7 +35,7 @@ class _AIMentorScreenState extends State<AIMentorScreen>
     super.initState();
     _setupAnimations();
     _initializeAI();
-    // Notify that AI mentor is open
+    // Mark AI as open
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AIMentorStateService>().setAIMentorOpen(true);
     });
@@ -48,7 +48,7 @@ class _AIMentorScreenState extends State<AIMentorScreen>
       _addWelcomeMessage();
     } catch (e) {
       print('Error initializing AI: $e');
-      _addWelcomeMessage(); // Add welcome message even if AI fails to initialize
+      _addWelcomeMessage(); // Show welcome even if AI fails
     }
   }
 
