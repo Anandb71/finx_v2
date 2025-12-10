@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
-import '../services/portfolio_provider.dart';
+import '../services/enhanced_portfolio_provider.dart';
 
 class ModernStockCard extends StatefulWidget {
   final Map<String, dynamic> stockData;
@@ -68,10 +68,10 @@ class _ModernStockCardState extends State<ModernStockCard>
     final symbol = widget.stockData['symbol'] ?? 'N/A';
     final name = widget.stockData['name'] ?? 'Unknown Company';
 
-    return Consumer<PortfolioProvider>(
+    return Consumer<EnhancedPortfolioProvider>(
       builder: (context, portfolio, child) {
-        // Get real-time price from PortfolioProvider
-        final realTimePrice = portfolio.currentPrices[symbol] ?? 0.0;
+        // Get real-time price from EnhancedPortfolioProvider
+        final realTimePrice = portfolio.getCurrentPrice(symbol);
         final currentPrice = realTimePrice > 0
             ? realTimePrice
             : (widget.stockData['currentPrice'] ?? 0.0).toDouble();

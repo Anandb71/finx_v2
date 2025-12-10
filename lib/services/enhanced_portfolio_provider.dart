@@ -66,6 +66,39 @@ class EnhancedPortfolioProvider extends ChangeNotifier {
     return (totalValue / 5000).floor() + 1;
   }
 
+  // XP earned from trades (50 XP per trade)
+  int get userXp => _transactions.length * 50;
+
+  // Total number of trades made
+  int get totalTrades => _transactions.length;
+
+  // Recent achievements (placeholder for now)
+  List<String> get recentAchievements {
+    final achievements = <String>[];
+    if (_transactions.length >= 1) achievements.add('First Trade');
+    if (_transactions.length >= 10) achievements.add('Active Trader');
+    if (_totalValue > 110000) achievements.add('10% Gains');
+    if (_totalValue > 150000) achievements.add('50% Gains');
+    return achievements;
+  }
+
+  // Reset portfolio to initial state
+  void resetPortfolio() {
+    _virtualCash = 100000.0;
+    _holdings.clear();
+    _transactions.clear();
+    _currentStockData.clear();
+    _priceHistory.clear();
+    _totalValue = 100000.0;
+    _totalGain = 0.0;
+    _totalGainPercent = 0.0;
+    _dayGain = 0.0;
+    _dayGainPercent = 0.0;
+    _portfolioValueHistory.clear();
+    _portfolioValueHistory.add(100000.0);
+    notifyListeners();
+  }
+
   // Start loading real-time data
   void initializeRealTimeData() {
     // Start periodic updates

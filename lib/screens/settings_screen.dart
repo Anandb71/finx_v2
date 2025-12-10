@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/portfolio_provider.dart';
+import '../services/enhanced_portfolio_provider.dart';
 import '../services/data_cache.dart';
 import 'login_screen.dart';
 
@@ -59,7 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
-    final portfolio = context.watch<PortfolioProvider>();
+    final portfolio = context.watch<EnhancedPortfolioProvider>();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
@@ -177,7 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildUserProfileCard(PortfolioProvider portfolio, bool isDesktop) {
+  Widget _buildUserProfileCard(EnhancedPortfolioProvider portfolio, bool isDesktop) {
     final user = FirebaseAuth.instance.currentUser;
 
     return Container(
@@ -282,7 +282,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildQuickStats(PortfolioProvider portfolio, bool isDesktop) {
+  Widget _buildQuickStats(EnhancedPortfolioProvider portfolio, bool isDesktop) {
     return Row(
       children: [
         Expanded(
@@ -599,7 +599,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           TextButton(
             onPressed: () {
-              context.read<PortfolioProvider>().resetPortfolio();
+              context.read<EnhancedPortfolioProvider>().resetPortfolio();
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
